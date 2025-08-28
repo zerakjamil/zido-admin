@@ -1,0 +1,711 @@
+{
+  "openapi": "3.0.3",
+  "info": { "title": "ZidoBid Admin API", "version": "0.1.0-local" },
+  "servers": [{ "url": "/" }],
+  "paths": {
+    "/v1/admin/profile": {
+      "get": {
+        "operationId": "getAdminProfile",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/Admin" } }
+            }
+          }
+        }
+      }
+    },
+    "/v1/auth/login": {
+      "post": {
+        "operationId": "adminLogin",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/LoginRequest" } }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/LoginResponse" } }
+            }
+          }
+        }
+      }
+    },
+    "/v1/logout": {
+      "post": { "operationId": "adminLogout", "responses": { "204": { "description": "No Content" } } }
+    },
+
+    "/v1/admin/dashboard": {
+      "get": {
+        "operationId": "getDashboardStats",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/DashboardStats" } }
+            }
+          }
+        }
+      }
+    },
+
+    "/v1/admin/users": {
+      "get": {
+        "operationId": "getAdminUsers",
+        "parameters": [
+          { "in": "query", "name": "page", "schema": { "type": "integer", "default": 1 } },
+          { "in": "query", "name": "per_page", "schema": { "type": "integer", "default": 10 } },
+          { "in": "query", "name": "search", "schema": { "type": "string" } },
+          { "in": "query", "name": "status", "schema": { "type": "string", "enum": ["active", "suspended", "banned"] } },
+          { "in": "query", "name": "sort_by", "schema": { "type": "string", "default": "created_at" } },
+          { "in": "query", "name": "sort_direction", "schema": { "type": "string", "enum": ["asc", "desc"], "default": "desc" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/PaginatedUsers" } }
+            }
+          }
+        }
+      }
+    },
+    "/v1/admin/users/{id}": {
+      "get": {
+        "operationId": "getAdminUser",
+        "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "integer" } }],
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/User" } } } }
+        }
+      },
+      "put": {
+        "operationId": "updateAdminUser",
+        "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "integer" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UpdateUserRequest" } } } },
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/User" } } } }
+        }
+      },
+      "delete": {
+        "operationId": "deleteAdminUser",
+        "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "204": { "description": "No Content" } }
+      }
+    },
+    "/v1/admin/users/{id}/suspend": {
+      "post": {
+        "operationId": "suspendAdminUser",
+        "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "integer" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SuspendUserRequest" } } } },
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/v1/admin/users/{id}/unsuspend": {
+      "post": {
+        "operationId": "unsuspendAdminUser",
+        "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+
+    "/v1/admin/auction-items": {
+      "get": {
+        "operationId": "getAdminAuctionItems",
+        "parameters": [
+          { "in": "query", "name": "page", "schema": { "type": "integer", "default": 1 } },
+          { "in": "query", "name": "per_page", "schema": { "type": "integer", "default": 10 } },
+          { "in": "query", "name": "search", "schema": { "type": "string" } },
+          { "in": "query", "name": "status", "schema": { "type": "string", "enum": ["draft", "active", "ended", "cancelled"] } },
+          { "in": "query", "name": "category_id", "schema": { "type": "integer" } },
+          { "in": "query", "name": "featured", "schema": { "type": "boolean" } },
+          { "in": "query", "name": "sort_by", "schema": { "type": "string", "default": "created_at" } },
+          { "in": "query", "name": "sort_direction", "schema": { "type": "string", "enum": ["asc", "desc"], "default": "desc" } }
+        ],
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PaginatedAuctionItems" } } } }
+        }
+      },
+      "post": {
+        "operationId": "createAdminAuctionItem",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateAuctionItemRequest" } } } },
+        "responses": {
+          "201": { "description": "Created", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AuctionItem" } } } }
+        }
+      }
+    },
+    "/v1/admin/auction-items/{id}": {
+      "get": {
+        "operationId": "getAdminAuctionItem",
+        "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AuctionItem" } } } } }
+      },
+      "put": {
+        "operationId": "updateAdminAuctionItem",
+        "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "integer" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UpdateAuctionItemRequest" } } } },
+        "responses": { "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AuctionItem" } } } } }
+      },
+      "delete": {
+        "operationId": "deleteAdminAuctionItem",
+        "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "204": { "description": "No Content" } }
+      }
+    },
+    "/v1/admin/auction-items/{id}/force-end": {
+      "post": {
+        "operationId": "forceEndAdminAuctionItem",
+        "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+
+    "/v1/admin/categories": {
+      "get": {
+        "operationId": "getAdminCategories",
+        "parameters": [
+          { "in": "query", "name": "page", "schema": { "type": "integer", "default": 1 } },
+          { "in": "query", "name": "per_page", "schema": { "type": "integer", "default": 10 } },
+          { "in": "query", "name": "search", "schema": { "type": "string" } },
+          { "in": "query", "name": "status", "schema": { "type": "string", "enum": ["active", "inactive"] } },
+          { "in": "query", "name": "parent_id", "schema": { "type": "integer" } }
+        ],
+        "responses": { "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PaginatedCategories" } } } } }
+      },
+      "post": {
+        "operationId": "createAdminCategory",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateCategoryRequest" } } } },
+        "responses": { "201": { "description": "Created", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Category" } } } } }
+      }
+    },
+    "/v1/admin/categories/{id}": {
+      "get": {
+        "operationId": "getAdminCategory",
+        "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Category" } } } } }
+      },
+      "put": {
+        "operationId": "updateAdminCategory",
+        "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "integer" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UpdateCategoryRequest" } } } },
+        "responses": { "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Category" } } } } }
+      },
+      "delete": {
+        "operationId": "deleteAdminCategory",
+        "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "204": { "description": "No Content" } }
+      }
+    },
+
+    "/v1/admin/promotional-banners": {
+      "get": {
+        "operationId": "getAdminPromotionalBanners",
+        "parameters": [
+          { "in": "query", "name": "page", "schema": { "type": "integer", "default": 1 } },
+          { "in": "query", "name": "per_page", "schema": { "type": "integer", "default": 10 } },
+          { "in": "query", "name": "position", "schema": { "type": "string" } },
+          { "in": "query", "name": "status", "schema": { "type": "string", "enum": ["active", "inactive"] } }
+        ],
+        "responses": { "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PaginatedBanners" } } } } }
+      },
+      "post": {
+        "operationId": "createAdminPromotionalBanner",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateBannerRequest" } } } },
+        "responses": { "201": { "description": "Created", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PromotionalBanner" } } } } }
+      }
+    },
+    "/v1/admin/promotional-banners/{id}": {
+      "get": {
+        "operationId": "getAdminPromotionalBanner",
+        "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PromotionalBanner" } } } } }
+      },
+      "put": {
+        "operationId": "updateAdminPromotionalBanner",
+        "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "integer" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateBannerRequest" } } } },
+        "responses": { "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PromotionalBanner" } } } } }
+      },
+      "delete": {
+        "operationId": "deleteAdminPromotionalBanner",
+        "parameters": [{ "in": "path", "name": "id", "required": true, "schema": { "type": "integer" } }],
+        "responses": { "204": { "description": "No Content" } }
+      }
+    },
+    "/v1/admin/promotional-banners/reorder": {
+      "post": {
+        "operationId": "reorderAdminPromotionalBanners",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ReorderBannersRequest" } } }
+        },
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+
+    "/v1/admin/bids": {
+      "get": {
+        "operationId": "getAdminBids",
+        "parameters": [
+          { "in": "query", "name": "page", "schema": { "type": "integer", "default": 1 } },
+          { "in": "query", "name": "per_page", "schema": { "type": "integer", "default": 10 } },
+          { "in": "query", "name": "auction_item_id", "schema": { "type": "integer" } },
+          { "in": "query", "name": "bidder_id", "schema": { "type": "integer" } },
+          { "in": "query", "name": "start_date", "schema": { "type": "string", "format": "date-time" } },
+          { "in": "query", "name": "end_date", "schema": { "type": "string", "format": "date-time" } }
+        ],
+        "responses": { "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PaginatedBids" } } } } }
+      }
+    },
+
+    "/v1/admin/reports/revenue": {
+      "get": {
+        "operationId": "getAdminRevenueReport",
+        "parameters": [
+          { "in": "query", "name": "start_date", "schema": { "type": "string", "format": "date-time" } },
+          { "in": "query", "name": "end_date", "schema": { "type": "string", "format": "date-time" } },
+          { "in": "query", "name": "period", "schema": { "type": "string" } }
+        ],
+        "responses": { "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RevenueReport" } } } } }
+      }
+    },
+    "/v1/admin/reports/user-activity": {
+      "get": {
+        "operationId": "getAdminUserActivityReport",
+        "parameters": [
+          { "in": "query", "name": "start_date", "schema": { "type": "string", "format": "date-time" } },
+          { "in": "query", "name": "end_date", "schema": { "type": "string", "format": "date-time" } },
+          { "in": "query", "name": "period", "schema": { "type": "string" } }
+        ],
+        "responses": { "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UserActivityReport" } } } } }
+      }
+    },
+
+    "/v1/admin/ended-items": {
+      "get": {
+        "operationId": "getAdminEndedItems",
+        "parameters": [
+          { "in": "query", "name": "page", "schema": { "type": "integer", "default": 1 } },
+          { "in": "query", "name": "per_page", "schema": { "type": "integer", "default": 10 } },
+          { "in": "query", "name": "has_winner", "schema": { "type": "boolean" } },
+          { "in": "query", "name": "start_date", "schema": { "type": "string", "format": "date-time" } },
+          { "in": "query", "name": "end_date", "schema": { "type": "string", "format": "date-time" } }
+        ],
+        "responses": { "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PaginatedAuctionItems" } } } } }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Admin": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "name": { "type": "string" },
+          "email": { "type": "string" },
+          "role": { "type": "string" },
+          "permissions": { "type": "array", "items": { "type": "string" } },
+          "created_at": { "type": "string", "format": "date-time" },
+          "updated_at": { "type": "string", "format": "date-time" }
+        },
+        "required": ["id", "name", "email", "role", "permissions", "created_at", "updated_at"]
+      },
+      "LoginRequest": {
+        "type": "object",
+        "properties": { "email": { "type": "string" }, "password": { "type": "string" } },
+        "required": ["email", "password"]
+      },
+      "LoginResponse": {
+        "type": "object",
+        "properties": {
+          "admin": { "$ref": "#/components/schemas/Admin" },
+          "token": { "type": "string" },
+          "expires_at": { "type": "string", "format": "date-time" }
+        },
+        "required": ["admin", "token"]
+      },
+
+      "Pagination": {
+        "type": "object",
+        "properties": {
+          "current_page": { "type": "integer" },
+          "per_page": { "type": "integer" },
+          "total": { "type": "integer" },
+          "last_page": { "type": "integer" },
+          "from": { "type": "integer" },
+          "to": { "type": "integer" }
+        },
+        "required": ["current_page", "per_page", "total", "last_page"]
+      },
+
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "name": { "type": "string" },
+          "email": { "type": "string" },
+          "email_verified_at": { "type": "string", "format": "date-time", "nullable": true },
+          "phone": { "type": "string", "nullable": true },
+          "profile_image": { "type": "string", "nullable": true },
+          "status": { "type": "string", "enum": ["active", "suspended", "banned"] },
+          "suspension_reason": { "type": "string", "nullable": true },
+          "suspension_until": { "type": "string", "format": "date-time", "nullable": true },
+          "total_auctions": { "type": "integer" },
+          "total_bids": { "type": "integer" },
+          "total_winnings": { "type": "number" },
+          "registration_date": { "type": "string", "format": "date-time" },
+          "last_login": { "type": "string", "format": "date-time" },
+          "created_at": { "type": "string", "format": "date-time" },
+          "updated_at": { "type": "string", "format": "date-time" }
+        },
+        "required": [
+          "id",
+          "name",
+          "email",
+          "status",
+          "total_auctions",
+          "total_bids",
+          "total_winnings",
+          "created_at",
+          "updated_at"
+        ]
+      },
+      "UpdateUserRequest": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "email": { "type": "string" },
+          "phone": { "type": "string" },
+          "status": { "type": "string", "enum": ["active", "suspended", "banned"] }
+        }
+      },
+      "SuspendUserRequest": {
+        "type": "object",
+        "properties": {
+          "reason": { "type": "string" },
+          "duration": { "type": "integer", "description": "in days" },
+          "until": { "type": "string", "format": "date-time" }
+        },
+        "required": ["reason"]
+      },
+      "PaginatedUsers": {
+        "type": "object",
+        "properties": {
+          "data": { "type": "array", "items": { "$ref": "#/components/schemas/User" } },
+          "pagination": { "$ref": "#/components/schemas/Pagination" }
+        },
+        "required": ["data", "pagination"]
+      },
+
+      "Category": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "name": { "type": "string" },
+          "description": { "type": "string", "nullable": true },
+          "slug": { "type": "string" },
+          "image": { "type": "string", "nullable": true },
+          "parent_id": { "type": "integer", "nullable": true },
+          "status": { "type": "string", "enum": ["active", "inactive"] },
+          "sort_order": { "type": "integer" },
+          "auction_items_count": { "type": "integer" },
+          "created_at": { "type": "string", "format": "date-time" },
+          "updated_at": { "type": "string", "format": "date-time" }
+        },
+        "required": ["id", "name", "slug", "status", "sort_order", "created_at", "updated_at"]
+      },
+      "CreateCategoryRequest": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "description": { "type": "string" },
+          "parent_id": { "type": "integer" },
+          "image": { "type": "string" },
+          "sort_order": { "type": "integer" }
+        },
+        "required": ["name"]
+      },
+      "UpdateCategoryRequest": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "description": { "type": "string" },
+          "parent_id": { "type": "integer" },
+          "image": { "type": "string" },
+          "sort_order": { "type": "integer" },
+          "status": { "type": "string", "enum": ["active", "inactive"] }
+        }
+      },
+      "PaginatedCategories": {
+        "type": "object",
+        "properties": {
+          "data": { "type": "array", "items": { "$ref": "#/components/schemas/Category" } },
+          "pagination": { "$ref": "#/components/schemas/Pagination" }
+        },
+        "required": ["data", "pagination"]
+      },
+
+      "AuctionItem": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "title": { "type": "string" },
+          "description": { "type": "string" },
+          "starting_bid": { "type": "number" },
+          "current_bid": { "type": "number" },
+          "reserve_price": { "type": "number", "nullable": true },
+          "bid_increment": { "type": "number" },
+          "start_time": { "type": "string", "format": "date-time" },
+          "end_time": { "type": "string", "format": "date-time" },
+          "status": { "type": "string", "enum": ["draft", "active", "ended", "cancelled"] },
+          "featured": { "type": "boolean" },
+          "condition": { "type": "string" },
+          "location": { "type": "string" },
+          "shipping_info": { "type": "string", "nullable": true },
+          "images": { "type": "array", "items": { "type": "string" } },
+          "category_id": { "type": "integer" },
+          "bids_count": { "type": "integer" },
+          "watchers_count": { "type": "integer" },
+          "views_count": { "type": "integer" },
+          "winner_id": { "type": "integer", "nullable": true },
+          "final_price": { "type": "number", "nullable": true },
+          "created_at": { "type": "string", "format": "date-time" },
+          "updated_at": { "type": "string", "format": "date-time" }
+        },
+        "required": [
+          "id",
+          "title",
+          "starting_bid",
+          "bid_increment",
+          "start_time",
+          "end_time",
+          "status",
+          "featured",
+          "images",
+          "category_id",
+          "created_at",
+          "updated_at"
+        ]
+      },
+      "CreateAuctionItemRequest": {
+        "type": "object",
+        "properties": {
+          "title": { "type": "string" },
+          "description": { "type": "string" },
+          "starting_bid": { "type": "number" },
+          "reserve_price": { "type": "number" },
+          "bid_increment": { "type": "number" },
+          "start_time": { "type": "string", "format": "date-time" },
+          "end_time": { "type": "string", "format": "date-time" },
+          "category_id": { "type": "integer" },
+          "condition": { "type": "string" },
+          "location": { "type": "string" },
+          "shipping_info": { "type": "string" },
+          "images": { "type": "array", "items": { "type": "string" } },
+          "featured": { "type": "boolean" }
+        },
+        "required": ["title", "description", "starting_bid", "bid_increment", "start_time", "end_time", "category_id", "condition", "location"]
+      },
+      "UpdateAuctionItemRequest": {
+        "type": "object",
+        "properties": {
+          "title": { "type": "string" },
+          "description": { "type": "string" },
+          "starting_bid": { "type": "number" },
+          "reserve_price": { "type": "number" },
+          "bid_increment": { "type": "number" },
+          "start_time": { "type": "string", "format": "date-time" },
+          "end_time": { "type": "string", "format": "date-time" },
+          "category_id": { "type": "integer" },
+          "condition": { "type": "string" },
+          "location": { "type": "string" },
+          "shipping_info": { "type": "string" },
+          "featured": { "type": "boolean" }
+        }
+      },
+      
+      "PaginatedAuctionItems": {
+        "type": "object",
+        "properties": {
+          "data": { "type": "array", "items": { "$ref": "#/components/schemas/AuctionItem" } },
+          "pagination": { "$ref": "#/components/schemas/Pagination" }
+        },
+        "required": ["data", "pagination"]
+      },
+
+      "PromotionalBanner": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "title": { "type": "string" },
+          "description": { "type": "string", "nullable": true },
+          "image": { "type": "string" },
+          "link_url": { "type": "string", "nullable": true },
+          "position": { "type": "string", "enum": ["header", "sidebar", "footer", "home_hero", "category_top"] },
+          "status": { "type": "string", "enum": ["active", "inactive"] },
+          "sort_order": { "type": "integer" },
+          "start_date": { "type": "string", "format": "date-time", "nullable": true },
+          "end_date": { "type": "string", "format": "date-time", "nullable": true },
+          "click_count": { "type": "integer" },
+          "impression_count": { "type": "integer" },
+          "created_at": { "type": "string", "format": "date-time" },
+          "updated_at": { "type": "string", "format": "date-time" }
+        },
+        "required": ["id", "title", "image", "position", "status", "sort_order", "created_at", "updated_at"]
+      },
+      "CreateBannerRequest": {
+        "type": "object",
+        "properties": {
+          "title": { "type": "string" },
+          "description": { "type": "string" },
+          "image": { "type": "string" },
+          "link_url": { "type": "string" },
+          "position": { "type": "string" },
+          "start_date": { "type": "string", "format": "date-time" },
+          "end_date": { "type": "string", "format": "date-time" },
+          "sort_order": { "type": "integer" }
+        },
+        "required": ["title", "image", "position"]
+      },
+      "PaginatedBanners": {
+        "type": "object",
+        "properties": {
+          "data": { "type": "array", "items": { "$ref": "#/components/schemas/PromotionalBanner" } },
+          "pagination": { "$ref": "#/components/schemas/Pagination" }
+        },
+        "required": ["data", "pagination"]
+      },
+      "ReorderBannersRequest": {
+        "type": "object",
+        "properties": { "banner_ids": { "type": "array", "items": { "type": "integer" } } },
+        "required": ["banner_ids"]
+      },
+
+      "Bid": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "amount": { "type": "number" },
+          "bid_time": { "type": "string", "format": "date-time" },
+          "bidder_id": { "type": "integer" },
+          "auction_item_id": { "type": "integer" },
+          "is_winning": { "type": "boolean" },
+          "auto_bid_max": { "type": "number", "nullable": true },
+          "created_at": { "type": "string", "format": "date-time" },
+          "updated_at": { "type": "string", "format": "date-time" }
+        },
+        "required": [
+          "id",
+          "amount",
+          "bid_time",
+          "bidder_id",
+          "auction_item_id",
+          "is_winning",
+          "created_at",
+          "updated_at"
+        ]
+      },
+      "PaginatedBids": {
+        "type": "object",
+        "properties": {
+          "data": { "type": "array", "items": { "$ref": "#/components/schemas/Bid" } },
+          "pagination": { "$ref": "#/components/schemas/Pagination" }
+        },
+        "required": ["data", "pagination"]
+      },
+
+      "DashboardStats": {
+        "type": "object",
+        "properties": {
+          "total_users": { "type": "integer" },
+          "active_users": { "type": "integer" },
+          "total_auction_items": { "type": "integer" },
+          "active_auctions": { "type": "integer" },
+          "total_bids": { "type": "integer" },
+          "total_revenue": { "type": "number" },
+          "recent_signups": { "type": "integer" },
+          "recent_auctions": { "type": "integer" },
+          "pending_items": { "type": "integer" },
+          "reported_items": { "type": "integer" }
+        },
+        "required": ["total_users", "active_users", "total_auction_items", "active_auctions", "total_bids", "total_revenue"]
+      },
+
+      "RevenueReport": {
+        "type": "object",
+        "properties": {
+          "total_revenue": { "type": "number" },
+          "period_revenue": { "type": "number" },
+          "commission_revenue": { "type": "number" },
+          "listing_fees": { "type": "number" },
+          "premium_fees": { "type": "number" },
+          "daily_breakdown": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "date": { "type": "string", "format": "date" },
+                "revenue": { "type": "number" },
+                "transactions": { "type": "integer" }
+              },
+              "required": ["date", "revenue", "transactions"]
+            }
+          },
+          "top_revenue_categories": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "category": { "type": "string" },
+                "revenue": { "type": "number" },
+                "percentage": { "type": "number" }
+              },
+              "required": ["category", "revenue", "percentage"]
+            }
+          }
+        },
+        "required": ["total_revenue", "period_revenue", "commission_revenue", "listing_fees", "premium_fees"]
+      },
+
+      "UserActivityReport": {
+        "type": "object",
+        "properties": {
+          "total_active_users": { "type": "integer" },
+          "new_registrations": { "type": "integer" },
+          "active_bidders": { "type": "integer" },
+          "active_sellers": { "type": "integer" },
+          "daily_activity": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "date": { "type": "string", "format": "date" },
+                "active_users": { "type": "integer" },
+                "new_registrations": { "type": "integer" },
+                "total_bids": { "type": "integer" },
+                "total_listings": { "type": "integer" }
+              },
+              "required": ["date", "active_users", "new_registrations", "total_bids", "total_listings"]
+            }
+          },
+          "user_engagement": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "metric": { "type": "string" },
+                "value": { "type": "number" },
+                "change": { "type": "number" }
+              },
+              "required": ["metric", "value", "change"]
+            }
+          }
+        },
+        "required": ["total_active_users", "new_registrations", "active_bidders", "active_sellers"]
+      }
+    }
+  }
+}

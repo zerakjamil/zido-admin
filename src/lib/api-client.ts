@@ -1,158 +1,236 @@
-import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
+// Simplified API client using the new auth store
+import type { Admin, LoginRequest } from '@/types/zidobid';
 
-class ApiClient {
-  private client: AxiosInstance;
-  private baseURL: string;
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.zidobid.com';
 
-  constructor() {
-    // Use environment variable for API URL, fallback to localhost for development
-    this.baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8888';
+class ApiError extends Error {
+  constructor(public status: number, message: string) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
+
+async function request<T>(
+  endpoint: string,
+  options: RequestInit = {}
+): Promise<T> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+    ...((options.headers as Record<string, string>) || {}),
+  };
+
+  // Auto-attach token for authenticated requests
+  const token = typeof window !== 'undefined' 
+    ? localStorage.getItem('zido_admin_token') 
+    : null;
     
-    this.client = axios.create({
-      baseURL: `${this.baseURL}/api/v1/admin`,
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      },
-      timeout: 30000,
+  if (token && !endpoint.includes('/login')) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  const url = `${API_BASE_URL}${endpoint}`;
+  
+  try {
+    const response = await fetch(url, {
+      ...options,
+      headers,
     });
 
-    this.setupInterceptors();
-  }
-
-  private setupInterceptors() {
-    // Request interceptor to add auth token
-    this.client.interceptors.request.use(
-      (config) => {
-        const token = this.getAuthToken();
-        if (token) {
-          config.headers.Authorization = `Bearer ${token}`;
-        }
-        return config;
-      },
-      (error) => {
-        return Promise.reject(error);
+    if (!response.ok) {
+      let errorMessage = 'An error occurred';
+      
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.message || errorData.error || `HTTP ${response.status}: ${response.statusText}`;
+      } catch {
+        errorMessage = `HTTP ${response.status}: ${response.statusText}`;
       }
-    );
+      
+      throw new ApiError(response.status, errorMessage);
+    }
 
-    // Response interceptor for error handling
-    this.client.interceptors.response.use(
-      (response) => response,
-      (error) => {
-        if (error.response?.status === 401) {
-          this.removeAuthToken();
-          if (typeof window !== 'undefined') {
-            window.location.href = '/login';
+    // Handle empty responses
+    const contentType = response.headers.get('content-type');
+    if (contentType && contentType.includes('application/json')) {
+      return response.json();
+    }
+    
+    return {} as T;
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    
+    // Network or other errors
+    throw new ApiError(0, error instanceof Error ? error.message : 'Network error');
+  }
+}
+
+// API client object
+export const api = {
+  auth: {
+    login: (credentials: LoginRequest) => 
+      request<{ admin: Admin; token: string }>('/api/v1/auth/login', {
+        method: 'POST',
+        body: JSON.stringify(credentials),
+      }),
+    
+    logout: () => 
+      request('/api/v1/logout', {
+        method: 'POST',
+      }),
+    
+    getProfile: () => 
+      request<Admin>('/api/v1/admin/profile', {
+        method: 'GET',
+      }),
+  },
+  
+  users: {
+    list: (params?: Record<string, unknown>) => {
+      const searchParams = new URLSearchParams();
+      if (params) {
+        Object.entries(params).forEach(([key, value]) => {
+          if (value !== undefined && value !== null) {
+            searchParams.append(key, String(value));
+          }
+        });
+      }
+      const queryString = searchParams.toString();
+      return request(`/api/v1/admin/users${queryString ? `?${queryString}` : ''}`);
+    },
+    
+    get: (id: number) => 
+      request(`/api/v1/admin/users/${id}`),
+    
+    create: (data: unknown) => 
+      request('/api/v1/admin/users', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    
+    update: (id: number, data: unknown) => 
+      request(`/api/v1/admin/users/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+      }),
+    
+    delete: (id: number) => 
+      request(`/api/v1/admin/users/${id}`, {
+        method: 'DELETE',
+      }),
+  },
+
+  // Add other endpoints as needed
+  auctions: {
+    list: (params?: Record<string, unknown>) => {
+      const searchParams = new URLSearchParams();
+      if (params) {
+        Object.entries(params).forEach(([key, value]) => {
+          if (value !== undefined && value !== null) {
+            searchParams.append(key, String(value));
+          }
+        });
+      }
+      const queryString = searchParams.toString();
+      return request(`/api/v1/admin/auctions${queryString ? `?${queryString}` : ''}`);
+    },
+  },
+
+  categories: {
+    list: (params?: Record<string, unknown>) => {
+      const searchParams = new URLSearchParams();
+      if (params) {
+        Object.entries(params).forEach(([key, value]) => {
+          if (value !== undefined && value !== null) {
+            searchParams.append(key, String(value));
+          }
+        });
+      }
+      const queryString = searchParams.toString();
+      return request(`/api/v1/admin/categories${queryString ? `?${queryString}` : ''}`);
+    },
+  },
+
+  banners: {
+    list: (params?: Record<string, unknown>) => {
+      const searchParams = new URLSearchParams();
+      if (params) {
+        Object.entries(params).forEach(([key, value]) => {
+          if (value !== undefined && value !== null) {
+            searchParams.append(key, String(value));
+          }
+        });
+      }
+      const queryString = searchParams.toString();
+      return request(`/api/v1/admin/banners${queryString ? `?${queryString}` : ''}`);
+    },
+  },
+
+  bids: {
+    list: (params?: Record<string, unknown>) => {
+      const searchParams = new URLSearchParams();
+      if (params) {
+        Object.entries(params).forEach(([key, value]) => {
+          if (value !== undefined && value !== null) {
+            searchParams.append(key, String(value));
+          }
+        });
+      }
+      const queryString = searchParams.toString();
+      return request(`/api/v1/admin/bids${queryString ? `?${queryString}` : ''}`);
+    },
+  },
+};
+
+// Legacy exports for backward compatibility
+export class ApiClient {
+  async get<T>(url: string, options?: { params?: Record<string, unknown> }): Promise<T> {
+    let finalUrl = url;
+    if (options?.params) {
+      const searchParams = new URLSearchParams();
+      Object.entries(options.params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          if (typeof value === 'object' && !Array.isArray(value)) {
+            searchParams.append(key, JSON.stringify(value));
+          } else if (Array.isArray(value)) {
+            value.forEach((item, index) => {
+              searchParams.append(`${key}[${index}]`, String(item));
+            });
+          } else {
+            // value is a primitive type (string, number, boolean)
+            searchParams.append(key, String(value));
           }
         }
-        return Promise.reject(error);
+      });
+      const queryString = searchParams.toString();
+      if (queryString) {
+        finalUrl += `?${queryString}`;
       }
-    );
-  }
-
-  private getAuthToken(): string | null {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('zido_admin_token');
     }
-    return null;
+    return request<T>(finalUrl);
   }
 
-  private removeAuthToken(): void {
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('zido_admin_token');
-      localStorage.removeItem('zido_admin_user');
-    }
+  async post<T>(url: string, data?: unknown, options?: { headers?: Record<string, string> }): Promise<T> {
+    return request<T>(url, {
+      method: 'POST',
+      body: data ? JSON.stringify(data) : undefined,
+      headers: options?.headers,
+    });
   }
 
-  public setAuthToken(token: string): void {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('zido_admin_token', token);
-    }
+  async put<T>(url: string, data?: unknown): Promise<T> {
+    return request<T>(url, {
+      method: 'PUT',
+      body: data ? JSON.stringify(data) : undefined,
+    });
   }
 
-  // Generic HTTP methods
-  async get<T>(url: string, config?: AxiosRequestConfig): Promise<T> {
-    const response = await this.client.get(url, config);
-    return response.data;
-  }
-
-  async post<T>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> {
-    const response = await this.client.post(url, data, config);
-    return response.data;
-  }
-
-  async put<T>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> {
-    const response = await this.client.put(url, data, config);
-    return response.data;
-  }
-
-  async delete<T>(url: string, config?: AxiosRequestConfig): Promise<T> {
-    const response = await this.client.delete(url, config);
-    return response.data;
-  }
-
-  async patch<T>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> {
-    const response = await this.client.patch(url, data, config);
-    return response.data;
-  }
-
-  // Authentication requests without /admin prefix
-  async authPost<T>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<T> {
-    const fullURL = `${this.baseURL}/api/v1${url}`;
-    const authConfig = {
-      ...config,
-      baseURL: `${this.baseURL}/api/v1`, // Use base API path without /admin
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        ...config?.headers,
-      },
-      timeout: 30000,
-    };
-
-    const token = this.getAuthToken();
-    if (token && url !== '/login') {
-      authConfig.headers = {
-        ...authConfig.headers,
-        Authorization: `Bearer ${token}`,
-      };
-    }
-
-    if (typeof window !== 'undefined') {
-      console.log('[apiClient.authPost] baseURL:', authConfig.baseURL, 'url:', url, 'fullURL:', fullURL);
-    }
-
-    const response = await axios.post(url, data, authConfig);
-    return response.data;
-  }
-
-  async authGet<T>(url: string, config?: AxiosRequestConfig): Promise<T> {
-    const fullURL = `${this.baseURL}/api/v1${url}`;
-    const authConfig = {
-      ...config,
-      baseURL: `${this.baseURL}/api/v1`,
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        ...config?.headers,
-      },
-      timeout: 30000,
-    };
-
-    const token = this.getAuthToken();
-    if (token) {
-      authConfig.headers = {
-        ...authConfig.headers,
-        Authorization: `Bearer ${token}`,
-      };
-    }
-
-    if (typeof window !== 'undefined') {
-      console.log('[apiClient.authGet] baseURL:', authConfig.baseURL, 'url:', url, 'fullURL:', fullURL);
-    }
-
-    const response = await axios.get(url, authConfig);
-    return response.data;
+  async delete<T>(url: string): Promise<T> {
+    return request<T>(url, {
+      method: 'DELETE',
+    });
   }
 
   // File upload helper
@@ -162,16 +240,16 @@ class ApiClient {
     
     if (additionalData) {
       Object.keys(additionalData).forEach(key => {
-        formData.append(key, String(additionalData[key]));
+        const value = additionalData[key];
+        formData.append(key, String(value));
       });
     }
 
-    const response = await this.client.post(url, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
+    return request<T>(url, {
+      method: 'POST',
+      body: formData,
+      headers: {}, // Let browser set Content-Type for multipart/form-data
     });
-    return response.data;
   }
 
   // Multiple file upload helper
@@ -195,12 +273,11 @@ class ApiClient {
       });
     }
 
-    const response = await this.client.post(url, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
+    return request<T>(url, {
+      method: 'POST',
+      body: formData,
+      headers: {}, // Let browser set Content-Type for multipart/form-data
     });
-    return response.data;
   }
 }
 

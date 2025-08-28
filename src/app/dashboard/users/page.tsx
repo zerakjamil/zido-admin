@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Table,
   Card,
@@ -31,59 +31,103 @@ import {
   ReloadOutlined,
   DownloadOutlined,
 } from '@ant-design/icons';
-import { userService } from '@/services/zidobid-api';
 import { formatCurrency, formatDateTime, getStatusColor } from '@/lib/utils';
-import type { User, PaginatedResponse, UpdateUserRequest, SuspendUserRequest } from '@/types/zidobid';
+// Replace legacy types with generated API types
+import type { User, UpdateUserRequest, SuspendUserRequest, GetAdminUsersParams } from '@/lib/api/generated/models';
+import { useGetAdminUsers, useUpdateAdminUser, useDeleteAdminUser, useSuspendAdminUser, useUnsuspendAdminUser, getGetAdminUsersQueryKey } from '@/lib/api/generated';
+import { useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import AdminLayout from '@/components/AdminLayout';
+import { useAuthStore } from '@/lib/auth-store';
 
 const { Title } = Typography;
 const { confirm } = Modal;
 const { Search } = Input;
 
 export default function UsersPage() {
-  const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  const [total, setTotal] = useState(0);
-  const [filters, setFilters] = useState({
+  const [filters, setFilters] = useState<Pick<GetAdminUsersParams, 'search' | 'status' | 'sort_by' | 'sort_direction'>>({
     search: '',
-    status: '',
+    status: undefined,
     sort_by: 'created_at',
-    sort_direction: 'desc' as 'asc' | 'desc',
+    sort_direction: 'desc',
   });
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [viewModalVisible, setViewModalVisible] = useState(false);
   const [suspendModalVisible, setSuspendModalVisible] = useState(false);
-  const [editForm] = Form.useForm();
-  const [suspendForm] = Form.useForm();
+  const [editForm] = Form.useForm<UpdateUserRequest>();
+  const [suspendForm] = Form.useForm<SuspendUserRequest & { duration?: number | string; until?: unknown }>();
 
-  const fetchUsers = useCallback(async () => {
-    try {
-      setLoading(true);
-      const response: PaginatedResponse<User> = await userService.getUsers({
-        page: currentPage,
-        per_page: pageSize,
-        search: filters.search || undefined,
-        status: filters.status || undefined,
-        sort_by: filters.sort_by,
-        sort_direction: filters.sort_direction,
-      });
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
-      setUsers(response.data);
-      setTotal(response.pagination.total);
-    } catch (error) {
-      message.error('Failed to fetch users');
-      console.error('Error fetching users:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, [currentPage, pageSize, filters.search, filters.status, filters.sort_by, filters.sort_direction]);
+  // React Query
+  const params: GetAdminUsersParams = {
+    page: currentPage,
+    per_page: pageSize,
+    search: filters.search || undefined,
+    status: filters.status || undefined,
+    sort_by: filters.sort_by,
+    sort_direction: filters.sort_direction,
+  };
 
+  const usersQuery = useGetAdminUsers(params, {
+    query: {
+      placeholderData: keepPreviousData,
+    },
+  });
+
+  const users = usersQuery.data?.data ?? [];
+  const total = usersQuery.data?.pagination.total ?? 0;
+  const loading = usersQuery.isFetching || usersQuery.isLoading;
+
+  const qc = useQueryClient();
+
+  const updateUserMutation = useUpdateAdminUser({
+    mutation: {
+      onSuccess: () => {
+        qc.invalidateQueries({ queryKey: getGetAdminUsersQueryKey(params) });
+      },
+      onError: () => message.error('Failed to update user'),
+    },
+  });
+
+  const deleteUserMutation = useDeleteAdminUser({
+    mutation: {
+      onSuccess: () => {
+        message.success('User deleted successfully');
+        qc.invalidateQueries({ queryKey: getGetAdminUsersQueryKey(params) });
+      },
+      onError: () => message.error('Failed to delete user'),
+    },
+  });
+
+  const suspendUserMutation = useSuspendAdminUser({
+    mutation: {
+      onSuccess: () => {
+        message.success('User suspended successfully');
+        qc.invalidateQueries({ queryKey: getGetAdminUsersQueryKey(params) });
+      },
+      onError: () => message.error('Failed to suspend user'),
+    },
+  });
+
+  const unsuspendUserMutation = useUnsuspendAdminUser({
+    mutation: {
+      onSuccess: () => {
+        message.success('User unsuspended successfully');
+        qc.invalidateQueries({ queryKey: getGetAdminUsersQueryKey(params) });
+      },
+      onError: () => message.error('Failed to unsuspend user'),
+    },
+  });
+
+  // Route protection - redirect if not authenticated
   useEffect(() => {
-    fetchUsers();
-  }, [fetchUsers]);
+    if (!isAuthenticated) {
+      window.location.href = '/login';
+    }
+  }, [isAuthenticated]);
 
   const handleSearch = (value: string) => {
     setFilters(prev => ({ ...prev, search: value }));
@@ -91,7 +135,7 @@ export default function UsersPage() {
   };
 
   const handleStatusFilter = (value: string) => {
-    setFilters(prev => ({ ...prev, status: value }));
+    setFilters(prev => ({ ...prev, status: (value || undefined) as GetAdminUsersParams['status'] }));
     setCurrentPage(1);
   };
 
@@ -120,7 +164,7 @@ export default function UsersPage() {
     editForm.setFieldsValue({
       name: user.name,
       email: user.email,
-      phone: user.phone,
+      phone: user.phone ?? undefined,
       status: user.status,
     });
     setEditModalVisible(true);
@@ -130,12 +174,13 @@ export default function UsersPage() {
     if (!selectedUser) return;
 
     try {
-      await userService.updateUser(selectedUser.id, values);
-      message.success('User updated successfully');
+      await updateUserMutation.mutateAsync({
+        pathParams: { id: selectedUser.id },
+        data: values,
+      });
       setEditModalVisible(false);
-      fetchUsers();
     } catch (error) {
-      message.error('Failed to update user');
+      // Error toast handled in mutation onError
       console.error('Error updating user:', error);
     }
   };
@@ -146,27 +191,38 @@ export default function UsersPage() {
     setSuspendModalVisible(true);
   };
 
-  const handleSuspendSubmit = async (values: SuspendUserRequest) => {
+  const handleSuspendSubmit = async (values: SuspendUserRequest & { duration?: number | string; until?: unknown }) => {
     if (!selectedUser) return;
 
+    // Normalize types (antd Input and DatePicker values)
+    const payload: SuspendUserRequest = {
+      reason: values.reason,
+      duration:
+        values.duration === undefined || values.duration === null
+          ? undefined
+          : (typeof values.duration === 'string' && values.duration === '')
+            ? undefined
+            : Number(values.duration),
+      until: values.until ? new Date(values.until as unknown as Date).toISOString() : undefined,
+    };
+
     try {
-      await userService.suspendUser(selectedUser.id, values);
-      message.success('User suspended successfully');
+      await suspendUserMutation.mutateAsync({
+        pathParams: { id: selectedUser.id },
+        data: payload,
+      });
       setSuspendModalVisible(false);
-      fetchUsers();
     } catch (error) {
-      message.error('Failed to suspend user');
+      // handled by onError
       console.error('Error suspending user:', error);
     }
   };
 
   const handleUnsuspend = async (user: User) => {
     try {
-      await userService.unsuspendUser(user.id);
-      message.success('User unsuspended successfully');
-      fetchUsers();
+      await unsuspendUserMutation.mutateAsync({ pathParams: { id: user.id } });
     } catch (error) {
-      message.error('Failed to unsuspend user');
+      // handled by onError
       console.error('Error unsuspending user:', error);
     }
   };
@@ -181,11 +237,9 @@ export default function UsersPage() {
       cancelText: 'Cancel',
       onOk: async () => {
         try {
-          await userService.deleteUser(user.id);
-          message.success('User deleted successfully');
-          fetchUsers();
+          await deleteUserMutation.mutateAsync({ pathParams: { id: user.id } });
         } catch (error) {
-          message.error('Failed to delete user');
+          // handled by onError
           console.error('Error deleting user:', error);
         }
       },
@@ -247,7 +301,7 @@ export default function UsersPage() {
       sorter: true,
       render: (_: string, record: User) => (
         <Space>
-          <Avatar src={record.profile_image} size="small">
+          <Avatar src={record.profile_image ?? undefined} size="small">
             {record.name.charAt(0).toUpperCase()}
           </Avatar>
           <div>
@@ -272,7 +326,7 @@ export default function UsersPage() {
       title: 'Phone',
       dataIndex: 'phone',
       key: 'phone',
-      render: (phone: string) => phone || '-',
+      render: (phone: string | null | undefined) => phone || '-',
     },
     {
       title: 'Auctions',
@@ -330,6 +384,11 @@ export default function UsersPage() {
     },
     { total: 0, active: 0, suspended: 0, banned: 0 }
   );
+
+  // Don't render anything if not authenticated
+  if (!isAuthenticated) {
+    return null;
+  }
 
   return (
     <AdminLayout>
@@ -407,7 +466,7 @@ export default function UsersPage() {
                 <Tooltip title="Refresh">
                   <Button
                     icon={<ReloadOutlined />}
-                    onClick={fetchUsers}
+                    onClick={() => usersQuery.refetch()}
                     loading={loading}
                   />
                 </Tooltip>
@@ -491,7 +550,7 @@ export default function UsersPage() {
                 <Button onClick={() => setEditModalVisible(false)}>
                   Cancel
                 </Button>
-                <Button type="primary" htmlType="submit">
+                <Button type="primary" htmlType="submit" loading={updateUserMutation.isPending}>
                   Update User
                 </Button>
               </Space>
@@ -530,7 +589,7 @@ export default function UsersPage() {
                 <Button onClick={() => setSuspendModalVisible(false)}>
                   Cancel
                 </Button>
-                <Button type="primary" danger htmlType="submit">
+                <Button type="primary" danger htmlType="submit" loading={suspendUserMutation.isPending}>
                   Suspend User
                 </Button>
               </Space>
@@ -555,7 +614,7 @@ export default function UsersPage() {
               <Row gutter={[16, 16]}>
                 <Col span={8}>
                   <div style={{ textAlign: 'center' }}>
-                    <Avatar size={80} src={selectedUser.profile_image}>
+                    <Avatar size={80} src={selectedUser.profile_image ?? undefined}>
                       {selectedUser.name.charAt(0).toUpperCase()}
                     </Avatar>
                     <div style={{ marginTop: 8, fontWeight: 500 }}>
@@ -584,10 +643,10 @@ export default function UsersPage() {
                       <strong>Total Winnings:</strong> {formatCurrency(selectedUser.total_winnings)}
                     </div>
                     <div>
-                      <strong>Registration Date:</strong> {formatDateTime(selectedUser.registration_date)}
+                      <strong>Registration Date:</strong> {selectedUser.registration_date ? formatDateTime(selectedUser.registration_date) : '-'}
                     </div>
                     <div>
-                      <strong>Last Login:</strong> {formatDateTime(selectedUser.last_login)}
+                      <strong>Last Login:</strong> {selectedUser.last_login ? formatDateTime(selectedUser.last_login) : '-'}
                     </div>
                     {selectedUser.suspension_reason && (
                       <div>

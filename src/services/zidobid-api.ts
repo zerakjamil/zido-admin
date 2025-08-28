@@ -1,4 +1,4 @@
-import { apiClient } from '../lib/api-client';
+import { api, apiClient } from '../lib/api-client';
 import type {
   LoginRequest,
   LoginResponse,
@@ -26,17 +26,20 @@ import type {
 // Authentication Services
 export const authService = {
   login: async (credentials: LoginRequest): Promise<LoginResponse> => {
-    const response = await apiClient.authPost<ApiResponse<LoginResponse>>('/login', credentials);
-    return response.data;
+    const response = await api.auth.login(credentials);
+    return {
+      admin: response.admin,
+      token: response.token,
+      expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days from now
+    };
   },
 
   logout: async (): Promise<void> => {
-    await apiClient.authPost('/logout');
+    await api.auth.logout();
   },
 
   getProfile: async (): Promise<Admin> => {
-    const response = await apiClient.authGet<ApiResponse<Admin>>('/profile');
-    return response.data;
+    return api.auth.getProfile();
   },
 };
 

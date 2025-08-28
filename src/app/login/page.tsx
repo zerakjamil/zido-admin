@@ -4,7 +4,7 @@ import React from 'react';
 import { Card, Form, Input, Button, Typography, message } from 'antd';
 import { UserOutlined, LockOutlined } from '@ant-design/icons';
 import { useRouter } from 'next/navigation';
-import { useAdminAuth } from '@/contexts/AdminAuthContext';
+import { useAuthStore } from '@/lib/auth-store';
 
 const { Title } = Typography;
 
@@ -15,26 +15,28 @@ interface LoginFormData {
 
 export default function LoginPage() {
   const [form] = Form.useForm();
-  const [loading, setLoading] = React.useState(false);
   const router = useRouter();
-  const { login } = useAdminAuth();
+  const { login, isLoading, clearError } = useAuthStore();
+
+  React.useEffect(() => {
+    // Clear any previous errors when component mounts
+    clearError();
+  }, [clearError]);
 
   const handleSubmit = async (values: LoginFormData) => {
     try {
-      setLoading(true);
       console.log('Login attempt with:', values);
       console.log('API URL:', process.env.NEXT_PUBLIC_API_URL);
       await login({
         email: values.email,
         password: values.password,
       });
-      message.success('Login successful');
+      // Navigation will be handled by middleware
       router.push('/dashboard');
+      message.success('Login successful');
     } catch (error) {
       console.error('Login error:', error);
-      message.error('Login failed. Please check your credentials.');
-    } finally {
-      setLoading(false);
+      // Error message is already handled by the auth store
     }
   };
 
@@ -83,7 +85,7 @@ export default function LoginPage() {
               type="primary"
               htmlType="submit"
               className="w-full"
-              loading={loading}
+              loading={isLoading}
             >
               Sign In
             </Button>

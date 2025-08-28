@@ -17,18 +17,19 @@ import {
   BellOutlined,
 } from '@ant-design/icons';
 import { useRouter, usePathname } from 'next/navigation';
-import { useAdminAuth } from '../contexts/AdminAuthContext';
+import { useAuthStore } from '@/lib/auth-store';
 
 const { Header, Sider, Content } = Layout;
 const { Text } = Typography;
 
 interface AdminLayoutProps {
-  children: React.ReactNode;
+  readonly children: React.ReactNode;
 }
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const [collapsed, setCollapsed] = useState(false);
-  const { admin, logout } = useAdminAuth();
+  const admin = useAuthStore((state) => state.admin);
+  const logout = useAuthStore((state) => state.logout);
   const router = useRouter();
   const pathname = usePathname();
   const {
@@ -176,8 +177,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           }
         }
       }
-      if (pathname.startsWith(item.key as string)) {
-        return [item.key as string];
+      if (pathname.startsWith(item.key)) {
+        return [item.key];
       }
     }
     

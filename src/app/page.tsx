@@ -2,11 +2,12 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAdminAuth } from '@/contexts/AdminAuthContext';
+import { useAuthStore } from '@/lib/auth-store';
 import LoadingSpinner from '@/components/LoadingSpinner';
 
 export default function Home() {
-  const { isAuthenticated, isLoading } = useAdminAuth();
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const isLoading = useAuthStore((state) => state.isLoading);
   const router = useRouter();
 
   useEffect(() => {
