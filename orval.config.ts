@@ -11,7 +11,6 @@ export default defineConfig({
       target: 'src/lib/api/generated/index.ts',
       schemas: 'src/lib/api/generated/models',
       client: 'react-query',
-      httpClient: 'axios',
       prettier: true,
       clean: true,
       override: {
@@ -24,7 +23,7 @@ export default defineConfig({
         // (Orval auto-detects v5, but we can be explicit with options)
         query: {
           useSuspenseQuery: false,
-          staleTime: 10_000,
+          // staleTime is configured via QueryClient defaults (see src/lib/api/queryClient.ts)
         },
         // Prefer named params over big "params" object
         // so call-sites are strongly-typed per-parameter

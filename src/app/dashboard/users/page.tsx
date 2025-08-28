@@ -20,6 +20,7 @@ import {
   Statistic,
   Avatar,
   Tooltip,
+  Alert,
 } from 'antd';
 import {
   EditOutlined,
@@ -38,6 +39,7 @@ import { useGetAdminUsers, useUpdateAdminUser, useDeleteAdminUser, useSuspendAdm
 import { useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import AdminLayout from '@/components/AdminLayout';
 import { useAuthStore } from '@/lib/auth-store';
+import dayjs, { Dayjs } from 'dayjs';
 
 const { Title } = Typography;
 const { confirm } = Modal;
@@ -56,8 +58,11 @@ export default function UsersPage() {
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [viewModalVisible, setViewModalVisible] = useState(false);
   const [suspendModalVisible, setSuspendModalVisible] = useState(false);
+  const [isBulkSuspend, setIsBulkSuspend] = useState(false);
+  const [bulkActionLoading, setBulkActionLoading] = useState(false);
+  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [editForm] = Form.useForm<UpdateUserRequest>();
-  const [suspendForm] = Form.useForm<SuspendUserRequest & { duration?: number | string; until?: unknown }>();
+  const [suspendForm] = Form.useForm<SuspendUserRequest & { duration?: number | string; until?: Dayjs | string | null }>();
 
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
@@ -80,6 +85,7 @@ export default function UsersPage() {
   const users = usersQuery.data?.data ?? [];
   const total = usersQuery.data?.pagination.total ?? 0;
   const loading = usersQuery.isFetching || usersQuery.isLoading;
+  const loadErrorMessage = usersQuery.error ? ((usersQuery.error as { message?: string }).message ?? 'Failed to load users') : null;
 
   const qc = useQueryClient();
 
@@ -186,35 +192,66 @@ export default function UsersPage() {
   };
 
   const handleSuspend = (user: User) => {
+    setIsBulkSuspend(false);
     setSelectedUser(user);
     suspendForm.resetFields();
     setSuspendModalVisible(true);
   };
 
-  const handleSuspendSubmit = async (values: SuspendUserRequest & { duration?: number | string; until?: unknown }) => {
-    if (!selectedUser) return;
+  const handleBulkSuspendOpen = () => {
+    if (selectedRowKeys.length === 0) {
+      message.warning('Select at least one user');
+      return;
+    }
+    setIsBulkSuspend(true);
+    setSelectedUser(null);
+    suspendForm.resetFields();
+    setSuspendModalVisible(true);
+  };
 
+  const handleSuspendSubmit = async (values: SuspendUserRequest & { duration?: number | string; until?: Dayjs | string | null }) => {
     // Normalize types (antd Input and DatePicker values)
+    let durationNormalized: number | undefined;
+    if (values.duration === undefined || values.duration === null) {
+      durationNormalized = undefined;
+    } else if (typeof values.duration === 'string' && values.duration === '') {
+      durationNormalized = undefined;
+    } else {
+      durationNormalized = Number(values.duration);
+    }
+
     const payload: SuspendUserRequest = {
       reason: values.reason,
-      duration:
-        values.duration === undefined || values.duration === null
-          ? undefined
-          : (typeof values.duration === 'string' && values.duration === '')
-            ? undefined
-            : Number(values.duration),
-      until: values.until ? new Date(values.until as unknown as Date).toISOString() : undefined,
+      duration: durationNormalized,
+      until: values.until ? dayjs(values.until as Dayjs).toISOString() : undefined,
     };
 
     try {
-      await suspendUserMutation.mutateAsync({
-        pathParams: { id: selectedUser.id },
-        data: payload,
-      });
-      setSuspendModalVisible(false);
+      if (isBulkSuspend) {
+        setBulkActionLoading(true);
+        const ids = selectedRowKeys.map((k) => Number(k));
+        const results = await Promise.allSettled(
+          ids.map((id) => suspendUserMutation.mutateAsync({ pathParams: { id }, data: payload }))
+        );
+        setBulkActionLoading(false);
+        const successCount = results.filter(r => r.status === 'fulfilled').length;
+        const failCount = results.length - successCount;
+        if (successCount) message.success(`Suspended ${successCount} user(s)`);
+        if (failCount) message.error(`Failed to suspend ${failCount} user(s)`);
+        setSelectedRowKeys([]);
+        setSuspendModalVisible(false);
+        qc.invalidateQueries({ queryKey: getGetAdminUsersQueryKey(params) });
+      } else {
+        if (!selectedUser) return;
+        await suspendUserMutation.mutateAsync({
+          pathParams: { id: selectedUser.id },
+          data: payload,
+        });
+        setSuspendModalVisible(false);
+      }
     } catch (error) {
       // handled by onError
-      console.error('Error suspending user:', error);
+      console.error('Error suspending user(s):', error);
     }
   };
 
@@ -225,6 +262,31 @@ export default function UsersPage() {
       // handled by onError
       console.error('Error unsuspending user:', error);
     }
+  };
+
+  const handleBulkUnsuspend = async () => {
+    if (selectedRowKeys.length === 0) {
+      message.warning('Select at least one user');
+      return;
+    }
+    confirm({
+      title: `Unsuspend ${selectedRowKeys.length} selected user(s)?`,
+      icon: <ExclamationCircleOutlined />,
+      onOk: async () => {
+        setBulkActionLoading(true);
+        const ids = selectedRowKeys.map((k) => Number(k));
+        const results = await Promise.allSettled(
+          ids.map((id) => unsuspendUserMutation.mutateAsync({ pathParams: { id } }))
+        );
+        setBulkActionLoading(false);
+        const successCount = results.filter(r => r.status === 'fulfilled').length;
+        const failCount = results.length - successCount;
+        if (successCount) message.success(`Unsuspended ${successCount} user(s)`);
+        if (failCount) message.error(`Failed to unsuspend ${failCount} user(s)`);
+        setSelectedRowKeys([]);
+        qc.invalidateQueries({ queryKey: getGetAdminUsersQueryKey(params) });
+      },
+    });
   };
 
   const handleDelete = (user: User) => {
@@ -242,6 +304,33 @@ export default function UsersPage() {
           // handled by onError
           console.error('Error deleting user:', error);
         }
+      },
+    });
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedRowKeys.length === 0) {
+      message.warning('Select at least one user');
+      return;
+    }
+    confirm({
+      title: `Delete ${selectedRowKeys.length} selected user(s)?`,
+      icon: <ExclamationCircleOutlined />,
+      okText: 'Yes, Delete',
+      okType: 'danger',
+      onOk: async () => {
+        setBulkActionLoading(true);
+        const ids = selectedRowKeys.map((k) => Number(k));
+        const results = await Promise.allSettled(
+          ids.map((id) => deleteUserMutation.mutateAsync({ pathParams: { id } }))
+        );
+        setBulkActionLoading(false);
+        const successCount = results.filter(r => r.status === 'fulfilled').length;
+        const failCount = results.length - successCount;
+        if (successCount) message.success(`Deleted ${successCount} user(s)`);
+        if (failCount) message.error(`Failed to delete ${failCount} user(s)`);
+        setSelectedRowKeys([]);
+        qc.invalidateQueries({ queryKey: getGetAdminUsersQueryKey(params) });
       },
     });
   };
@@ -390,6 +479,36 @@ export default function UsersPage() {
     return null;
   }
 
+  const exportCsv = () => {
+    if (!users.length) {
+      message.info('No data to export');
+      return;
+    }
+    const header = ['Name','Email','Status','Phone','Auctions','Bids','Winnings','Joined'];
+    const rows = users.map((u) => [
+      u.name,
+      u.email,
+      u.status,
+      u.phone ?? '',
+      String(u.total_auctions ?? ''),
+      String(u.total_bids ?? ''),
+      String(u.total_winnings ?? ''),
+      u.created_at ? formatDateTime(u.created_at) : '',
+    ]);
+    const csv = [header, ...rows]
+      .map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(','))
+      .join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', 'users.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <AdminLayout>
       <div>
@@ -437,6 +556,10 @@ export default function UsersPage() {
           </Col>
         </Row>
 
+        {loadErrorMessage && (
+          <Alert style={{ marginBottom: 16 }} type="error" showIcon message="Failed to load users" description={loadErrorMessage} />
+        )}
+
         {/* Filters and Actions */}
         <Card style={{ marginBottom: 16 }}>
           <Row gutter={[16, 16]} align="middle">
@@ -462,7 +585,7 @@ export default function UsersPage() {
               />
             </Col>
             <Col xs={24} sm={10}>
-              <Space style={{ float: 'right' }}>
+              <Space style={{ float: 'right' }} wrap>
                 <Tooltip title="Refresh">
                   <Button
                     icon={<ReloadOutlined />}
@@ -470,8 +593,17 @@ export default function UsersPage() {
                     loading={loading}
                   />
                 </Tooltip>
-                <Button icon={<DownloadOutlined />}>
+                <Button icon={<DownloadOutlined />} onClick={exportCsv} disabled={!users.length}>
                   Export
+                </Button>
+                <Button onClick={handleBulkSuspendOpen} danger disabled={!selectedRowKeys.length} loading={bulkActionLoading}>
+                  Bulk Suspend
+                </Button>
+                <Button onClick={handleBulkUnsuspend} disabled={!selectedRowKeys.length} loading={bulkActionLoading}>
+                  Bulk Unsuspend
+                </Button>
+                <Button onClick={handleBulkDelete} danger disabled={!selectedRowKeys.length} loading={bulkActionLoading}>
+                  Bulk Delete
                 </Button>
               </Space>
             </Col>
@@ -485,6 +617,11 @@ export default function UsersPage() {
             dataSource={users}
             rowKey="id"
             loading={loading}
+            rowSelection={{
+              selectedRowKeys,
+              onChange: (keys) => setSelectedRowKeys(keys),
+              preserveSelectedRowKeys: true,
+            }}
             pagination={{
               current: currentPage,
               pageSize: pageSize,
@@ -560,7 +697,7 @@ export default function UsersPage() {
 
         {/* Suspend User Modal */}
         <Modal
-          title="Suspend User"
+          title={isBulkSuspend ? `Suspend ${selectedRowKeys.length} user(s)` : 'Suspend User'}
           open={suspendModalVisible}
           onCancel={() => setSuspendModalVisible(false)}
           footer={null}
@@ -589,8 +726,8 @@ export default function UsersPage() {
                 <Button onClick={() => setSuspendModalVisible(false)}>
                   Cancel
                 </Button>
-                <Button type="primary" danger htmlType="submit" loading={suspendUserMutation.isPending}>
-                  Suspend User
+                <Button type="primary" danger htmlType="submit" loading={suspendUserMutation.isPending || bulkActionLoading}>
+                  {isBulkSuspend ? 'Suspend Selected' : 'Suspend User'}
                 </Button>
               </Space>
             </Form.Item>

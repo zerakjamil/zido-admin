@@ -28,11 +28,26 @@ Object.defineProperty(window, 'localStorage', {
 // Mock fetch
 global.fetch = jest.fn()
 
-// Mock window.location
-delete window.location
-window.location = {
-  href: 'http://localhost:3000',
-  origin: 'http://localhost:3000',
-  assign: jest.fn(),
-  replace: jest.fn(),
-}
+// Safe mock for window.location without triggering jsdom navigation
+(() => {
+  const originalLocation = window.location
+  let hrefValue = originalLocation.href
+
+  const locationMock = {
+    ...originalLocation,
+    assign: jest.fn(),
+    replace: jest.fn(),
+    reload: jest.fn(),
+  }
+
+  Object.defineProperty(locationMock, 'href', {
+    get: () => hrefValue,
+    set: (val) => { hrefValue = String(val) },
+    configurable: true,
+  })
+
+  Object.defineProperty(window, 'location', {
+    value: locationMock,
+    configurable: true,
+  })
+})()
