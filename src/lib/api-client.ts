@@ -42,7 +42,9 @@ async function request<T>(
       
       try {
         const errorData = await response.json();
-        errorMessage = errorData.message || errorData.error || `HTTP ${response.status}: ${response.statusText}`;
+        errorMessage = (errorData as { message?: string; error?: string })?.message 
+          || (errorData as { message?: string; error?: string })?.error 
+          || `HTTP ${response.status}: ${response.statusText}`;
       } catch {
         errorMessage = `HTTP ${response.status}: ${response.statusText}`;
       }
@@ -52,7 +54,7 @@ async function request<T>(
 
     // Handle empty responses
     const contentType = response.headers.get('content-type');
-    if (contentType && contentType.includes('application/json')) {
+    if (contentType?.includes('application/json')) {
       return response.json();
     }
     

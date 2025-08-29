@@ -17,6 +17,18 @@ interface AuthState {
   clearError: () => void;
 }
 
+const setAuthCookie = (token: string | null) => {
+  if (typeof document === 'undefined') return;
+  const maxAge = 60 * 60 * 24 * 7; // 7 days
+  if (token) {
+    const secure = process.env.NODE_ENV === 'production' ? '; Secure' : '';
+    document.cookie = `zido_admin_token=${encodeURIComponent(token)}; Path=/; Max-Age=${maxAge}; SameSite=Lax${secure}`;
+  } else {
+    // Expire cookie
+    document.cookie = 'zido_admin_token=; Path=/; Max-Age=0; SameSite=Lax';
+  }
+};
+
 export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
@@ -30,6 +42,21 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true, error: null });
         try {
           const response = (await adminLogin(credentials)) as unknown as Partial<LoginResponse>;
+
+          // Dev-only safe log of the API response (redacted)
+          if (typeof window !== 'undefined' && process.env.NODE_ENV !== 'production') {
+            console.debug('Login API response:', {
+              hasToken: typeof response.token === 'string',
+              tokenLength: typeof response.token === 'string' ? response.token.length : 0,
+              admin: response.admin
+                ? {
+                    id: (response.admin as Partial<Admin>).id,
+                    email: (response.admin as Partial<Admin>).email,
+                    name: (response.admin as Partial<Admin>).name,
+                  }
+                : null,
+            });
+          }
 
           // Validate response shape defensively (tests may return partial shapes)
           const hasToken = typeof response.token === 'string' && response.token.length > 0;
@@ -55,6 +82,11 @@ export const useAuthStore = create<AuthState>()(
           if (typeof window !== 'undefined') {
             localStorage.setItem('zido_admin_token', token);
             localStorage.setItem('zido_admin_user', JSON.stringify(adminData));
+            setAuthCookie(token);
+          }
+
+          if (process.env.NODE_ENV !== 'production') {
+            console.debug('Auth state set. Token stored in localStorage and cookie set.');
           }
 
           set({
@@ -101,6 +133,7 @@ export const useAuthStore = create<AuthState>()(
           if (typeof window !== 'undefined') {
             localStorage.removeItem('zido_admin_token');
             localStorage.removeItem('zido_admin_user');
+            setAuthCookie(null);
           }
 
           set({
@@ -167,10 +200,13 @@ if (typeof window !== 'undefined') {
         token: storedToken,
         isAuthenticated: true,
       });
+      // Ensure cookie is present for middleware
+      setAuthCookie(storedToken);
     } catch (error) {
       console.error('Failed to parse stored admin data:', error);
       localStorage.removeItem('zido_admin_token');
       localStorage.removeItem('zido_admin_user');
+      setAuthCookie(null);
     }
   }
 }

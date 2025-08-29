@@ -40,14 +40,61 @@ axiosClient.interceptors.request.use((config) => {
     config.url = config.url.replace(/\/(api\/v1\/)+/g, '/api/v1/');
   }
 
+  if (process.env.NODE_ENV !== 'production') {
+    const redactedHeaders = { ...(config.headers as Record<string, string>) };
+    if (redactedHeaders && redactedHeaders['Authorization']) {
+      redactedHeaders['Authorization'] = 'Bearer ***redacted***';
+    }
+    console.debug('[API request]', {
+      method: (config.method || 'get').toUpperCase(),
+      url: `${API_BASE_URL}${config.url}`,
+      headers: redactedHeaders,
+      data: config.data,
+    });
+  }
+
   return config;
 });
 
 // Global response handling for auth and common errors
 axiosClient.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    if (process.env.NODE_ENV !== 'production') {
+      console.debug('[API response]', {
+        url: response.config?.url,
+        status: response.status,
+        data: response.data,
+      });
+    }
+    return response;
+  },
   (error) => {
     const status = error?.response?.status as number | undefined;
+    const respData = error?.response?.data;
+
+    if (process.env.NODE_ENV !== 'production') {
+      const authHeader = error?.config?.headers?.Authorization ? 'Bearer ***redacted***' : undefined;
+      console.debug('[API response error]', {
+        url: error?.config?.url,
+        status,
+        data: respData,
+        message: error?.message,
+        headers: authHeader ? { Authorization: authHeader } : undefined,
+      });
+    }
+
+    // Derive a useful error message from server response when possible
+    let message = 'Request failed';
+    if (respData) {
+      if (typeof respData === 'string') {
+        message = respData;
+      } else if (typeof respData === 'object') {
+        message = respData.message || respData.error || message;
+      }
+    } else if (typeof error?.message === 'string' && error.message.trim().length > 0) {
+      message = error.message;
+    }
+
     if (status === 401 || status === 403) {
       if (typeof window !== 'undefined') {
         try {
@@ -60,8 +107,8 @@ axiosClient.interceptors.response.use(
         }
       }
     }
-    const reason = error instanceof Error ? error : new Error('Request failed');
-    return Promise.reject(reason);
+
+    return Promise.reject(new Error(message));
   }
 );
 
