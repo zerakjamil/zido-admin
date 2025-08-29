@@ -16,7 +16,7 @@
         }
       }
     },
-    "/v1/auth/login": {
+    "/v1/admin/login": {
       "post": {
         "operationId": "adminLogin",
         "requestBody": {

@@ -132,7 +132,7 @@ export const adminLogin = (
       
       
       return axiosMutator<LoginResponse>(
-      {url: `/v1/auth/login`, method: 'POST',
+      {url: `/v1/admin/login`, method: 'POST',
       headers: {'Content-Type': 'application/json', },
       data: loginRequest
     },

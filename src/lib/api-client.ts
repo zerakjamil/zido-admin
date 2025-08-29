@@ -71,13 +71,17 @@ async function request<T>(
 export const api = {
   auth: {
     login: (credentials: LoginRequest) => 
-      request<{ admin: Admin; token: string }>('/api/v1/auth/login', {
-        method: 'POST',
-        body: JSON.stringify(credentials),
-      }),
+      request<{ admin: Admin; token: string }>(
+        // FIX: correct endpoint path
+        '/api/v1/admin/login',
+        {
+          method: 'POST',
+          body: JSON.stringify(credentials),
+        }
+      ),
     
     logout: () => 
-      request('/api/v1/logout', {
+      request('/api/v1/admin/logout', {
         method: 'POST',
       }),
     
