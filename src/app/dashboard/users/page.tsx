@@ -40,12 +40,14 @@ import { useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import AdminLayout from '@/components/AdminLayout';
 import { useAuthStore } from '@/lib/auth-store';
 import dayjs, { Dayjs } from 'dayjs';
+import { useRouter } from 'next/navigation';
 
 const { Title } = Typography;
 const { confirm } = Modal;
 const { Search } = Input;
 
 export default function UsersPage() {
+  const router = useRouter();
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [filters, setFilters] = useState<Pick<GetAdminUsersParams, 'search' | 'status' | 'sort_by' | 'sort_direction'>>({
@@ -131,9 +133,9 @@ export default function UsersPage() {
   // Route protection - redirect if not authenticated
   useEffect(() => {
     if (!isAuthenticated) {
-      window.location.href = '/login';
+      router.replace('/login');
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, router]);
 
   const handleSearch = (value: string) => {
     setFilters(prev => ({ ...prev, search: value }));

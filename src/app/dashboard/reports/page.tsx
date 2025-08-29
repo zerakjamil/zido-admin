@@ -19,12 +19,14 @@ import type {
   UserActivityReportDailyActivityItem,
   UserActivityReportUserEngagementItem,
 } from '@/lib/api/generated/models';
+import { useRouter } from 'next/navigation';
 
 const { RangePicker } = DatePicker;
 const { Title } = Typography;
 
 export default function ReportsPage() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const router = useRouter();
 
   // Filters
   const [period, setPeriod] = useState<GetAdminRevenueReportParams['period']>('daily');
@@ -65,9 +67,9 @@ export default function ReportsPage() {
 
   useEffect(() => {
     if (!isAuthenticated) {
-      window.location.href = '/login';
+      router.replace('/login');
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, router]);
 
   useEffect(() => {
     if (revenueQuery.error) message.error('Failed to load revenue report');

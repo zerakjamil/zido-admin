@@ -4,6 +4,7 @@ import React, { useEffect } from 'react';
 import AdminLayout from '@/components/AdminLayout';
 import { Card, Form, Input, InputNumber, Select, Switch, Button, Space, Typography, message } from 'antd';
 import { useAuthStore } from '@/lib/auth-store';
+import { useRouter } from 'next/navigation';
 
 const { Title } = Typography;
 
@@ -15,13 +16,14 @@ export default function SettingsPage() {
     min_bid_increment: number;
     maintenance_mode: boolean;
   }>();
+  const router = useRouter();
 
   // Redirect if not authenticated
   useEffect(() => {
     if (!isAuthenticated) {
-      window.location.href = '/login';
+      router.replace('/login');
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, router]);
 
   // Load saved settings from localStorage
   useEffect(() => {

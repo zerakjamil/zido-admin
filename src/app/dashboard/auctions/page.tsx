@@ -45,11 +45,13 @@ import {
 import { useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { formatCurrency, formatDateTime, getStatusColor } from '@/lib/utils';
 import { useAuthStore } from '@/lib/auth-store';
+import { useRouter } from 'next/navigation';
 
 const { confirm } = Modal;
 const { Search } = Input;
 
 export default function AuctionsPage() {
+  const router = useRouter();
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [filters, setFilters] = useState<Pick<
@@ -137,9 +139,9 @@ export default function AuctionsPage() {
   // Route protection
   useEffect(() => {
     if (!isAuthenticated) {
-      window.location.href = '/login';
+      router.replace('/login');
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, router]);
 
   // Normalize possible Dayjs/Date/string from DatePicker to ISO string
   const normalizeDate = (v: unknown): string | undefined => {

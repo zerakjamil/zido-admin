@@ -28,26 +28,57 @@ Object.defineProperty(window, 'localStorage', {
 // Mock fetch
 global.fetch = jest.fn()
 
-// Safe mock for window.location without triggering jsdom navigation
-(() => {
-  const originalLocation = window.location
-  let hrefValue = originalLocation.href
+// Prevent jsdom navigation when tests set window.location.href
+try {
+  // No-op instance (may be non-configurable in some jsdom versions)
+  const current = window.location.href
+  Object.defineProperty(window.location, 'href', {
+    configurable: true,
+    get: () => current,
+    set: () => {
+      // no-op to avoid jsdom navigation not implemented error
+    },
+  })
+} catch {}
+try {
+  // Fallback: patch the prototype setter
+  Object.defineProperty(window.Location.prototype, 'href', {
+    configurable: true,
+    set: () => {
+      // no-op
+    },
+  })
+} catch {}
 
-  const locationMock = {
-    ...originalLocation,
-    assign: jest.fn(),
-    replace: jest.fn(),
-    reload: jest.fn(),
+// Mock Orval-generated API to route through global.fetch (which tests stub)
+jest.mock('@/lib/api/generated', () => {
+  return {
+    adminLogin: async (credentials) => {
+      const res = await fetch('/mock/api/v1/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(credentials),
+      })
+      const json = await res.json()
+      if (!res.ok || json?.success === false) {
+        throw new Error(json?.message || 'Login failed')
+      }
+      return json?.data ?? json
+    },
+    adminLogout: async () => {
+      const res = await fetch('/mock/api/v1/logout', { method: 'POST' })
+      if (!res.ok) {
+        throw new Error('Logout failed')
+      }
+    },
+    getAdminProfile: async () => {
+      const res = await fetch('/mock/api/v1/admin/profile', { method: 'GET' })
+      const json = await res.json()
+      if (!res.ok || json?.success === false) {
+        throw new Error(json?.message || 'Profile fetch failed')
+      }
+      // allow either {data:{...}} or direct object
+      return json?.data ?? json
+    },
   }
-
-  Object.defineProperty(locationMock, 'href', {
-    get: () => hrefValue,
-    set: (val) => { hrefValue = String(val) },
-    configurable: true,
-  })
-
-  Object.defineProperty(window, 'location', {
-    value: locationMock,
-    configurable: true,
-  })
-})()
+})

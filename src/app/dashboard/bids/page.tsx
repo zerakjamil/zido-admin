@@ -10,10 +10,12 @@ import { keepPreviousData } from '@tanstack/react-query';
 import { useAuthStore } from '@/lib/auth-store';
 import { formatCurrency, formatDateTime } from '@/lib/utils';
 import dayjs from 'dayjs';
+import { useRouter } from 'next/navigation';
 
 const { RangePicker } = DatePicker;
 
 export default function BidsPage() {
+  const router = useRouter();
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [filters, setFilters] = useState<Pick<GetAdminBidsParams, 'auction_item_id' | 'bidder_id' | 'start_date' | 'end_date'>>({});
@@ -39,9 +41,9 @@ export default function BidsPage() {
 
   useEffect(() => {
     if (!isAuthenticated) {
-      window.location.href = '/login';
+      router.replace('/login');
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, router]);
 
   const handleTableChange: NonNullable<TableProps<Bid>['onChange']> = (pagination) => {
     if (pagination.current) setCurrentPage(pagination.current);

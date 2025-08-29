@@ -37,10 +37,13 @@ import {
 import { keepPreviousData, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '@/lib/auth-store';
 import { formatDateTime, getStatusColor } from '@/lib/utils';
+import dayjs from 'dayjs';
+import { useRouter } from 'next/navigation';
 
 const { RangePicker } = DatePicker;
 
 export default function BannersPage() {
+  const router = useRouter();
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [filters, setFilters] = useState<Pick<GetAdminPromotionalBannersParams, 'position' | 'status'>>({
@@ -52,8 +55,8 @@ export default function BannersPage() {
   const [editVisible, setEditVisible] = useState(false);
   const [selected, setSelected] = useState<PromotionalBanner | null>(null);
 
-  const [createForm] = Form.useForm<CreateBannerRequest & { dateRange?: unknown[] }>();
-  const [editForm] = Form.useForm<CreateBannerRequest & { dateRange?: unknown[] }>();
+  const [createForm] = Form.useForm<CreateBannerRequest & { dateRange?: dayjs.Dayjs[] }>();
+  const [editForm] = Form.useForm<CreateBannerRequest & { dateRange?: dayjs.Dayjs[] }>();
 
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
@@ -116,9 +119,9 @@ export default function BannersPage() {
 
   useEffect(() => {
     if (!isAuthenticated) {
-      window.location.href = '/login';
+      router.replace('/login');
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, router]);
 
   const normalizeDate = (v: unknown): string | undefined => {
     if (!v) return undefined;
@@ -145,7 +148,7 @@ export default function BannersPage() {
     setCreateVisible(true);
   };
 
-  const onCreate = async (values: CreateBannerRequest & { dateRange?: unknown[] }) => {
+  const onCreate = async (values: CreateBannerRequest & { dateRange?: dayjs.Dayjs[] }) => {
     const [start, end] = Array.isArray(values.dateRange) ? values.dateRange : [undefined, undefined];
     const payload: CreateBannerRequest = {
       title: values.title,
@@ -168,19 +171,22 @@ export default function BannersPage() {
 
   const onEditOpen = (b: PromotionalBanner) => {
     setSelected(b);
-    editForm.setFieldsValue({
+    const fields: Partial<CreateBannerRequest & { dateRange?: dayjs.Dayjs[] }> = {
       title: b.title,
       description: b.description ?? undefined,
       image: b.image,
       link_url: b.link_url ?? undefined,
       position: b.position,
       sort_order: b.sort_order,
-      dateRange: [b.start_date, b.end_date],
-    });
+    };
+    if (b.start_date && b.end_date) {
+      fields.dateRange = [dayjs(b.start_date), dayjs(b.end_date)];
+    }
+    editForm.setFieldsValue(fields as CreateBannerRequest & { dateRange?: dayjs.Dayjs[] });
     setEditVisible(true);
   };
 
-  const onEdit = async (values: CreateBannerRequest & { dateRange?: unknown[] }) => {
+  const onEdit = async (values: CreateBannerRequest & { dateRange?: dayjs.Dayjs[] }) => {
     if (!selected) return;
     const [start, end] = Array.isArray(values.dateRange) ? values.dateRange : [undefined, undefined];
     const payload: CreateBannerRequest = {
@@ -300,7 +306,7 @@ export default function BannersPage() {
               style={{ width: 200 }}
               value={filters.status}
               onChange={(v: GetAdminPromotionalBannersStatus | '') =>
-                setFilters((p) => ({ ...p, status: v ? v : undefined }))
+                setFilters((p) => ({ ...p, status: v || undefined }))
               }
               options={[
                 { label: 'All', value: '' },

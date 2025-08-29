@@ -21,11 +21,13 @@ import {
 } from '@/lib/api/generated/models';
 import { useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { useAuthStore } from '@/lib/auth-store';
+import { useRouter } from 'next/navigation';
 
 const { confirm } = Modal;
 const { Search } = Input;
 
 export default function CategoriesPage() {
+  const router = useRouter();
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [filters, setFilters] = useState<Pick<GetAdminCategoriesParams, 'search' | 'status' | 'parent_id'>>({
@@ -93,9 +95,9 @@ export default function CategoriesPage() {
 
   useEffect(() => {
     if (!isAuthenticated) {
-      window.location.href = '/login';
+      router.replace('/login');
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, router]);
 
   const handleTableChange: NonNullable<TableProps<Category>['onChange']> = (pagination) => {
     if (pagination.current) setCurrentPage(pagination.current);

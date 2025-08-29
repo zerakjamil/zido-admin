@@ -14,9 +14,13 @@ const mockLocalStorage = {
 }
 Object.defineProperty(window, 'localStorage', { value: mockLocalStorage })
 
-// Mock window.location (already mocked in jest.setup.js, just override href)
+// Mock window.location (already mocked in jest.setup.js, avoid setting href directly)
 beforeEach(() => {
-  window.location.href = 'http://localhost:3000/login'
+  try {
+    window.history.replaceState({}, '', 'http://localhost:3000/login')
+  } catch {
+    // ignore
+  }
 })
 
 describe('Authentication Integration Flow', () => {
