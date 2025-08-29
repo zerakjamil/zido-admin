@@ -20,13 +20,13 @@ export function middleware(request: NextRequest) {
 
   // Redirect authenticated users away from login page
   if (token && isAuthPage) {
-    return NextResponse.redirect(new URL('/dashboard', request.url));
+    return NextResponse.redirect(new URL('/dashboard/users', request.url));
   }
 
   // Redirect root page to dashboard if authenticated, login if not
   if (isRootPage) {
     if (token) {
-      return NextResponse.redirect(new URL('/dashboard', request.url));
+      return NextResponse.redirect(new URL('/dashboard/users', request.url));
     } else {
       return NextResponse.redirect(new URL('/login', request.url));
     }

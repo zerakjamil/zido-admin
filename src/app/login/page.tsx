@@ -16,7 +16,10 @@ interface LoginFormData {
 export default function LoginPage() {
   const [form] = Form.useForm();
   const router = useRouter();
-  const { login, isLoading, clearError } = useAuthStore();
+  const login = useAuthStore((s) => s.login);
+  const clearError = useAuthStore((s) => s.clearError);
+  const isLoading = useAuthStore((s) => s.isLoading);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
   React.useEffect(() => {
     // Clear any previous errors when component mounts
@@ -25,18 +28,22 @@ export default function LoginPage() {
 
   const handleSubmit = async (values: LoginFormData) => {
     try {
-      console.log('Login attempt with:', values);
-      console.log('API URL:', process.env.NEXT_PUBLIC_API_URL);
-      await login({
-        email: values.email,
-        password: values.password,
-      });
-      // Navigation will be handled by middleware
-      router.push('/dashboard');
-      message.success('Login successful');
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('Login attempt with:', {
+          email: values.email,
+          hasPassword: !!values.password,
+        });
+        console.log('API URL:', process.env.NEXT_PUBLIC_API_URL);
+      }
+      await login({ email: values.email, password: values.password });
+      // Redirect only on success
+      if (useAuthStore.getState().isAuthenticated) {
+        router.push('/dashboard');
+        message.success('Login successful');
+      }
     } catch (error) {
-      console.error('Login error:', error);
-      // Error message is already handled by the auth store
+      console.error('Login error (unhandled):', error);
+      // Error message is handled by the auth store
     }
   };
 
@@ -86,6 +93,7 @@ export default function LoginPage() {
               htmlType="submit"
               className="w-full"
               loading={isLoading}
+              disabled={isAuthenticated}
             >
               Sign In
             </Button>

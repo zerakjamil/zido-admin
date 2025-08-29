@@ -2,8 +2,9 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { message } from 'antd';
 import type { Admin, LoginRequest } from '@/types/zidobid';
-import { adminLogin, adminLogout, getAdminProfile } from '@/lib/api/generated';
+import { adminLogin, getAdminProfile } from '@/lib/api/generated';
 import type { LoginResponse } from '@/lib/api/generated/models/loginResponse';
+import { axiosClient } from './api/client';
 
 interface AuthState {
   admin: Admin | null;
@@ -20,12 +21,13 @@ interface AuthState {
 const setAuthCookie = (token: string | null) => {
   if (typeof document === 'undefined') return;
   const maxAge = 60 * 60 * 24 * 7; // 7 days
+  const isHttps = typeof window !== 'undefined' && window.location.protocol === 'https:';
+  const secureFlag = isHttps ? '; Secure' : '';
   if (token) {
-    const secure = process.env.NODE_ENV === 'production' ? '; Secure' : '';
-    document.cookie = `zido_admin_token=${encodeURIComponent(token)}; Path=/; Max-Age=${maxAge}; SameSite=Lax${secure}`;
+    document.cookie = `zido_admin_token=${encodeURIComponent(token)}; Path=/; Max-Age=${maxAge}; SameSite=Lax${secureFlag}`;
   } else {
     // Expire cookie
-    document.cookie = 'zido_admin_token=; Path=/; Max-Age=0; SameSite=Lax';
+    document.cookie = `zido_admin_token=; Path=/; Max-Age=0; SameSite=Lax${secureFlag}`;
   }
 };
 
@@ -124,7 +126,7 @@ export const useAuthStore = create<AuthState>()(
         const { token } = get();
         try {
           if (token) {
-            await adminLogout();
+            await axiosClient.post('/v1/admin/logout');
           }
         } catch (error) {
           console.error('Logout error:', error);
