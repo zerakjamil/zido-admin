@@ -105,12 +105,12 @@ export default function CreateBannerPage() {
       const isImage = file.type.startsWith('image/');
       if (!isImage) {
         message.error('You can only upload image files!');
-        return false;
+        return Upload.LIST_IGNORE;
       }
       const isLt5M = file.size / 1024 / 1024 < 5;
       if (!isLt5M) {
         message.error('Image must be smaller than 5MB!');
-        return false;
+        return Upload.LIST_IGNORE;
       }
       
       // Create preview URL
@@ -399,12 +399,16 @@ export default function CreateBannerPage() {
         {isPreview && previewUrl && (
           <div 
             className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4"
-            onClick={handlePreview}
-            onKeyDown={(e) => e.key === 'Escape' && handlePreview()}
-            role="button"
-            tabIndex={0}
           >
-            <div className="max-w-4xl w-full">
+            <div className="relative max-w-4xl w-full">
+              <button
+                type="button"
+                aria-label="Close preview"
+                className="absolute top-2 right-2 bg-white/80 hover:bg-white text-gray-900 rounded px-2 py-1"
+                onClick={handlePreview}
+              >
+                Close
+              </button>
               <Image
                 src={previewUrl}
                 alt="Full preview"

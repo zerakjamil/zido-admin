@@ -54,6 +54,144 @@ const { Title, Text } = Typography;
 const { Search } = Input;
 const { Option } = Select;
 
+// Helper functions moved to top-level
+const getTimeRemaining = (endTime: string) => {
+  const now = new Date();
+  const end = new Date(endTime);
+  const diff = end.getTime() - now.getTime();
+  if (diff <= 0) return 'Ended';
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+  const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+  if (days > 0) return `${days}d ${hours}h`;
+  if (hours > 0) return `${hours}h ${minutes}m`;
+  return `${minutes}m`;
+};
+
+const getUrgencyColor = (endTime: string) => {
+  const now = new Date();
+  const end = new Date(endTime);
+  const diff = end.getTime() - now.getTime();
+  const hours = diff / (1000 * 60 * 60);
+  if (hours <= 1) return '#ff4d4f';
+  if (hours <= 6) return '#fa8c16';
+  if (hours <= 24) return '#fadb14';
+  return '#52c41a';
+};
+
+const getBidActivity = (item: AuctionItem) => {
+  const seed = item.id ? parseInt(item.id.toString()) : 1;
+  const bidCount = Math.floor((seed * 7) % 50) + 1;
+  const watchers = Math.floor((seed * 13) % 100) + 5;
+  return { bidCount, watchers };
+};
+
+// Extracted card component
+const AuctionCard = ({ item }: { item: AuctionItem }) => {
+  const timeRemaining = getTimeRemaining(item.end_time || '');
+  const urgencyColor = getUrgencyColor(item.end_time || '');
+  const { bidCount, watchers } = getBidActivity(item);
+  const progress = ((new Date().getTime() - new Date(item.start_time || '').getTime()) / 
+                   (new Date(item.end_time || '').getTime() - new Date(item.start_time || '').getTime())) * 100;
+
+  return (
+    <Card
+      hoverable
+      className="h-full"
+      cover={
+        <div className="relative h-48 bg-gray-100 flex items-center justify-center">
+          {item.images && item.images.length > 0 ? (
+            <Image 
+              src={item.images[0]} 
+              alt={item.name || 'Auction item'} 
+              width={300}
+              height={200}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="text-gray-400 text-4xl">
+              <TrophyOutlined />
+            </div>
+          )}
+          {item.is_featured && (
+            <Badge.Ribbon text="Featured" color="red" />
+          )}
+          <div className="absolute top-2 right-2">
+            <Tag color={urgencyColor} icon={<ClockCircleOutlined />}>
+              {timeRemaining}
+            </Tag>
+          </div>
+        </div>
+      }
+      actions={[
+        <Tooltip title="View Details" key="view">
+          <EyeOutlined />
+        </Tooltip>,
+        <Tooltip title="Add to Watchlist" key="watch">
+          <HeartOutlined />
+        </Tooltip>,
+        <Tooltip title="Quick Bid" key="bid">
+          <ThunderboltOutlined />
+        </Tooltip>,
+      ]}
+    >
+      <div className="space-y-3">
+        <div>
+          <Title level={5} className="!mb-1 line-clamp-2">
+            {item.name}
+          </Title>
+          <Text type="secondary" className="text-sm">
+            {item.item_code}
+          </Text>
+        </div>
+
+        <div className="space-y-2">
+          <div className="flex justify-between items-center">
+            <Text strong className="text-lg text-green-600">
+              {formatCurrency(item.current_price || item.starting_price || 0)}
+            </Text>
+            <Space size="small">
+              <Tooltip title="Total Bids">
+                <Badge count={bidCount} showZero color="#1890ff" />
+              </Tooltip>
+              <Tooltip title="Watchers">
+                <Space size={4}>
+                  <UserOutlined className="text-gray-400" />
+                  <Text type="secondary">{watchers}</Text>
+                </Space>
+              </Tooltip>
+            </Space>
+          </div>
+
+          <div>
+            <div className="flex justify-between text-sm mb-1">
+              <Text type="secondary">Progress</Text>
+              <Text type="secondary">{Math.round(progress)}%</Text>
+            </div>
+            <Progress 
+              percent={Math.min(progress, 100)} 
+              size="small" 
+              strokeColor={urgencyColor}
+              showInfo={false}
+            />
+          </div>
+
+          <div className="flex justify-between items-center text-sm">
+            <Text type="secondary">
+              Starting: {formatCurrency(item.starting_price || 0)}
+            </Text>
+            {item.reserve_price && (
+              <Text type="secondary">
+                Reserve: {formatCurrency(item.reserve_price)}
+              </Text>
+            )}
+          </div>
+        </div>
+      </div>
+    </Card>
+  );
+};
+
 export default function ActiveAuctionsPage() {
   const router = useRouter();
   const [currentPage, setCurrentPage] = useState(1);
@@ -111,45 +249,6 @@ export default function ActiveAuctionsPage() {
     }
   }, [isAuthenticated, router]);
 
-  // Calculate time remaining
-  const getTimeRemaining = (endTime: string) => {
-    const now = new Date();
-    const end = new Date(endTime);
-    const diff = end.getTime() - now.getTime();
-    
-    if (diff <= 0) return 'Ended';
-    
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-    
-    if (days > 0) return `${days}d ${hours}h`;
-    if (hours > 0) return `${hours}h ${minutes}m`;
-    return `${minutes}m`;
-  };
-
-  // Get urgency color based on time remaining
-  const getUrgencyColor = (endTime: string) => {
-    const now = new Date();
-    const end = new Date(endTime);
-    const diff = end.getTime() - now.getTime();
-    const hours = diff / (1000 * 60 * 60);
-    
-    if (hours <= 1) return '#ff4d4f';
-    if (hours <= 6) return '#fa8c16';
-    if (hours <= 24) return '#fadb14';
-    return '#52c41a';
-  };
-
-  // Mock bid activity data (in real app, this would come from API)
-  const getBidActivity = (item: AuctionItem) => {
-    // Use item.id to generate consistent random data for each auction
-    const seed = item.id ? parseInt(item.id.toString()) : 1;
-    const bidCount = Math.floor((seed * 7) % 50) + 1;
-    const watchers = Math.floor((seed * 13) % 100) + 5;
-    return { bidCount, watchers };
-  };
-
   const handleSearch = (value: string) => {
     setFilters(prev => ({ ...prev, search: value }));
     setCurrentPage(1);
@@ -166,111 +265,6 @@ export default function ActiveAuctionsPage() {
   };
 
   if (!isAuthenticated) return null;
-
-  const AuctionCard = ({ item }: { item: AuctionItem }) => {
-    const timeRemaining = getTimeRemaining(item.end_time || '');
-    const urgencyColor = getUrgencyColor(item.end_time || '');
-    const { bidCount, watchers } = getBidActivity(item);
-    const progress = ((new Date().getTime() - new Date(item.start_time || '').getTime()) / 
-                     (new Date(item.end_time || '').getTime() - new Date(item.start_time || '').getTime())) * 100;
-
-    return (
-      <Card
-        hoverable
-        className="h-full"
-        cover={
-          <div className="relative h-48 bg-gray-100 flex items-center justify-center">
-            {item.images && item.images.length > 0 ? (
-              <Image 
-                src={item.images[0]} 
-                alt={item.name || 'Auction item'} 
-                width={300}
-                height={200}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <div className="text-gray-400 text-4xl">
-                <TrophyOutlined />
-              </div>
-            )}
-            {item.is_featured && (
-              <Badge.Ribbon text="Featured" color="red" />
-            )}
-            <div className="absolute top-2 right-2">
-              <Tag color={urgencyColor} icon={<ClockCircleOutlined />}>
-                {timeRemaining}
-              </Tag>
-            </div>
-          </div>
-        }
-        actions={[
-          <Tooltip title="View Details" key="view">
-            <EyeOutlined />
-          </Tooltip>,
-          <Tooltip title="Add to Watchlist" key="watch">
-            <HeartOutlined />
-          </Tooltip>,
-          <Tooltip title="Quick Bid" key="bid">
-            <ThunderboltOutlined />
-          </Tooltip>,
-        ]}
-      >
-        <div className="space-y-3">
-          <div>
-            <Title level={5} className="!mb-1 line-clamp-2">
-              {item.name}
-            </Title>
-            <Text type="secondary" className="text-sm">
-              {item.item_code}
-            </Text>
-          </div>
-
-          <div className="space-y-2">
-            <div className="flex justify-between items-center">
-              <Text strong className="text-lg text-green-600">
-                {formatCurrency(item.current_price || item.starting_price || 0)}
-              </Text>
-              <Space size="small">
-                <Tooltip title="Total Bids">
-                  <Badge count={bidCount} showZero color="#1890ff" />
-                </Tooltip>
-                <Tooltip title="Watchers">
-                  <Space size={4}>
-                    <UserOutlined className="text-gray-400" />
-                    <Text type="secondary">{watchers}</Text>
-                  </Space>
-                </Tooltip>
-              </Space>
-            </div>
-
-            <div>
-              <div className="flex justify-between text-sm mb-1">
-                <Text type="secondary">Progress</Text>
-                <Text type="secondary">{Math.round(progress)}%</Text>
-              </div>
-              <Progress 
-                percent={Math.min(progress, 100)} 
-                size="small" 
-                strokeColor={urgencyColor}
-                showInfo={false}
-              />
-            </div>
-
-            <div className="flex justify-between items-center text-sm">
-              <Text type="secondary">
-                Starting: {formatCurrency(item.starting_price || 0)}
-              </Text>
-              {item.reserve_price && (
-                <Text type="secondary">
-                  Reserve: {formatCurrency(item.reserve_price)}
-                </Text>
-              )}
-            </div>
-          </div>
-        </div>
-      </Card>
-    );
-  };
 
   return (
     <AdminLayout>

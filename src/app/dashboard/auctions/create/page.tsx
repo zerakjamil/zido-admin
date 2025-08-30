@@ -57,6 +57,9 @@ import {
 } from '@/lib/api/generated';
 import { useAuthStore } from '@/lib/auth-store';
 import dayjs from 'dayjs';
+import relativeTime from 'dayjs/plugin/relativeTime';
+
+dayjs.extend(relativeTime);
 
 const { Title, Text, Paragraph } = Typography;
 const { TextArea } = Input;
@@ -70,6 +73,18 @@ interface AuctionDraft {
   data: Record<string, unknown>;
   lastSaved: string;
 }
+
+// Helper to safely format values for preview
+const formatValueForDisplay = (value: unknown): string => {
+  if (value === null || value === undefined) return 'Not set';
+  if (dayjs.isDayjs(value)) return value.format('YYYY-MM-DD HH:mm');
+  if (Array.isArray(value)) return value.map((v) => String(v)).join(', ');
+  if (typeof value === 'object') return JSON.stringify(value);
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number') return Number.isFinite(value) ? String(value) : 'Not set';
+  if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+  return 'Not set';
+};
 
 export default function CreateAuctionPage() {
   const router = useRouter();
@@ -117,10 +132,14 @@ export default function CreateAuctionPage() {
   useEffect(() => {
     const interval = setInterval(() => {
       const values = form.getFieldsValue();
-      if (values.name && Object.keys(values).length > 1) {
+      if ((values as Record<string, unknown>).name && Object.keys(values).length > 1) {
+        const draftValues = values as Record<string, unknown>;
+        const rawName = draftValues.name;
+        const safeName = typeof rawName === 'string' ? rawName : '';
+        const nameValue: string = draftName || safeName || 'Untitled Draft';
         const draft: AuctionDraft = {
           id: Date.now().toString(),
-          name: draftName || (values.name as string) || 'Untitled Draft',
+          name: nameValue,
           data: values,
           lastSaved: new Date().toISOString(),
         };
@@ -181,9 +200,12 @@ export default function CreateAuctionPage() {
   ];
 
   const saveDraft = (values: Record<string, unknown>, source = 'Manual') => {
+    const rawName = values.name;
+    const safeName = typeof rawName === 'string' ? rawName : '';
+    const nameValue: string = draftName || safeName || 'Untitled Draft';
     const draft: AuctionDraft = {
       id: Date.now().toString(),
-      name: draftName || (typeof values.name === 'string' ? values.name : '') || 'Untitled Draft',
+      name: nameValue,
       data: values,
       lastSaved: new Date().toISOString(),
     };
@@ -249,9 +271,9 @@ export default function CreateAuctionPage() {
         starting_price: values.starting_price,
         increment_amount: values.increment_amount,
         reserve_price: auctionType === 'reserve' ? values.reserve_price : undefined,
-        buy_now_price: auctionType === 'buy_now' ? values.buy_now_price : undefined,
-        start_time: values.start_time.toISOString(),
-        end_time: values.end_time.toISOString(),
+        buyout_price: auctionType === 'buy_now' ? values.buy_now_price : undefined,
+        start_time: dayjs(values.start_time).toDate().toISOString(),
+        end_time: dayjs(values.end_time).toDate().toISOString(),
         condition: values.condition,
         location: values.location,
         shipping_info: values.shipping_info,
@@ -355,14 +377,14 @@ export default function CreateAuctionPage() {
 
                 <Col span={12}>
                   <Form.Item name="retail_price" label="Original Retail Price">
-                    <InputNumber
+                    <InputNumber<number>
                       placeholder="0.00"
                       min={0}
                       step={0.01}
                       style={{ width: '100%' }}
                       size="large"
                       formatter={value => `$ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                      parser={value => value!.replace(/\$\s?|(,*)/g, '')}
+                      parser={(value) => (value ? Number(value.replace(/\$\s?|(,*)/g, '')) : 0)}
                     />
                   </Form.Item>
                 </Col>
@@ -539,14 +561,14 @@ export default function CreateAuctionPage() {
                     label="Starting Bid"
                     rules={[{ required: true, message: 'Please enter starting price' }]}
                   >
-                    <InputNumber
+                    <InputNumber<number>
                       placeholder="0.00"
                       min={0.01}
                       step={0.01}
                       style={{ width: '100%' }}
                       size="large"
                       formatter={value => `$ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                      parser={value => value!.replace(/\$\s?|(,*)/g, '')}
+                      parser={(value) => (value ? Number(value.replace(/\$\s?|(,*)/g, '')) : 0)}
                     />
                   </Form.Item>
                 </Col>
@@ -557,14 +579,14 @@ export default function CreateAuctionPage() {
                     label="Bid Increment"
                     rules={[{ required: true, message: 'Please enter bid increment' }]}
                   >
-                    <InputNumber
+                    <InputNumber<number>
                       placeholder="1.00"
                       min={0.01}
                       step={0.01}
                       style={{ width: '100%' }}
                       size="large"
                       formatter={value => `$ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                      parser={value => value!.replace(/\$\s?|(,*)/g, '')}
+                      parser={(value) => (value ? Number(value.replace(/\$\s?|(,*)/g, '')) : 0)}
                     />
                   </Form.Item>
                 </Col>
@@ -576,14 +598,14 @@ export default function CreateAuctionPage() {
                       label="Reserve Price"
                       tooltip="Minimum price you're willing to accept"
                     >
-                      <InputNumber
+                      <InputNumber<number>
                         placeholder="0.00"
                         min={0}
                         step={0.01}
                         style={{ width: '100%' }}
                         size="large"
                         formatter={value => `$ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                        parser={value => value!.replace(/\$\s?|(,*)/g, '')}
+                        parser={(value) => (value ? Number(value.replace(/\$\s?|(,*)/g, '')) : 0)}
                       />
                     </Form.Item>
                   </Col>
@@ -596,14 +618,14 @@ export default function CreateAuctionPage() {
                       label="Buy It Now Price"
                       tooltip="Fixed price for immediate purchase"
                     >
-                      <InputNumber
+                      <InputNumber<number>
                         placeholder="0.00"
                         min={0}
                         step={0.01}
                         style={{ width: '100%' }}
                         size="large"
                         formatter={value => `$ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                        parser={value => value!.replace(/\$\s?|(,*)/g, '')}
+                        parser={(value) => (value ? Number(value.replace(/\$\s?|(,*)/g, '')) : 0)}
                       />
                     </Form.Item>
                   </Col>
@@ -803,7 +825,7 @@ export default function CreateAuctionPage() {
                     {Object.entries(form.getFieldsValue()).map(([key, value]) => (
                       <div key={key} className="flex justify-between py-2 border-b">
                         <Text strong className="capitalize">{key.replace(/_/g, ' ')}:</Text>
-                        <Text>{String(value || 'Not set')}</Text>
+                        <Text>{formatValueForDisplay(value)}</Text>
                       </div>
                     ))}
                   </div>
@@ -853,7 +875,7 @@ export default function CreateAuctionPage() {
               icon={<SaveOutlined />}
               onClick={() => {
                 const values = form.getFieldsValue();
-                if (values.name) {
+                if ((values as Record<string, unknown>).name) {
                   saveDraft(values);
                 } else {
                   message.warning('Please enter an item name before saving draft');
@@ -862,7 +884,7 @@ export default function CreateAuctionPage() {
             >
               Save Draft
             </Button>
-            <Button icon={<EyeOutlined />} onClick={() => setPreviewVisible(true)}>
+            <Button icon={<EyeOutlined />} onClick={() => setCurrentStep(4)}>
               Preview
             </Button>
           </Space>

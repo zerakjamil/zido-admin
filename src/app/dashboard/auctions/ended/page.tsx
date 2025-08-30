@@ -49,6 +49,9 @@ import { formatCurrency, formatDateTime } from '@/lib/utils';
 import { useAuthStore } from '@/lib/auth-store';
 import { useRouter } from 'next/navigation';
 import dayjs from 'dayjs';
+import relativeTime from 'dayjs/plugin/relativeTime';
+
+dayjs.extend(relativeTime);
 
 const { Title, Text } = Typography;
 const { Search } = Input;
@@ -389,7 +392,10 @@ export default function EndedAuctionsPage() {
                 style={{ width: '100%' }}
                 placeholder={['Start Date', 'End Date']}
                 value={filters.dateRange}
-                onChange={(dates) => setFilters(prev => ({ ...prev, dateRange: dates }))}
+                onChange={(dates) => {
+                  const normalized = dates && dates[0] && dates[1] ? [dates[0], dates[1]] as [dayjs.Dayjs, dayjs.Dayjs] : null;
+                  setFilters(prev => ({ ...prev, dateRange: normalized }));
+                }}
               />
             </Col>
             <Col xs={24} md={4}>
