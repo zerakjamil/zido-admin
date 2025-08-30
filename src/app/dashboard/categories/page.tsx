@@ -60,7 +60,7 @@ export default function CategoriesPage() {
 
   const categoriesQuery = useGetAdminCategories(params, { query: { placeholderData: keepPreviousData } });
   const categories = categoriesQuery.data?.data ?? [];
-  const total = categoriesQuery.data?.pagination.total ?? 0;
+  const total = categoriesQuery.data?.meta?.total ?? 0;
   const loading = categoriesQuery.isFetching || categoriesQuery.isLoading;
 
   const createMutation = useCreateAdminCategory({

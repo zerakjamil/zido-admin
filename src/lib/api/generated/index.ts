@@ -19,11 +19,14 @@ import type {
 } from '@tanstack/react-query'
 import type {
   Admin,
-  AuctionItem,
-  Category,
+  AuctionItemResponse,
+  AuctionItemsPaginatedResponse,
+  BidsPaginatedResponse,
+  CategoriesPaginatedResponse,
+  CategoryResponse,
   CreateAuctionItemRequest,
-  CreateBannerRequest,
   CreateCategoryRequest,
+  CreatePromotionalBannerRequest,
   DashboardStats,
   DeleteAdminAuctionItemPathParameters,
   DeleteAdminCategoryPathParameters,
@@ -44,13 +47,9 @@ import type {
   GetAdminUsersParams,
   LoginRequest,
   LoginResponse,
-  PaginatedAuctionItems,
-  PaginatedBanners,
-  PaginatedBids,
-  PaginatedCategories,
-  PaginatedUsers,
-  PromotionalBanner,
-  ReorderBannersRequest,
+  PromotionalBannerResponse,
+  PromotionalBannersPaginatedResponse,
+  ReorderPromotionalBannersRequest,
   RevenueReport,
   SuspendAdminUserPathParameters,
   SuspendUserRequest,
@@ -62,8 +61,9 @@ import type {
   UpdateAuctionItemRequest,
   UpdateCategoryRequest,
   UpdateUserRequest,
-  User,
-  UserActivityReport
+  UserActivityReport,
+  UserResponse,
+  UsersPaginatedResponse
 } from './models'
 import { axiosMutator } from '../client';
 
@@ -290,7 +290,7 @@ export const getAdminUsers = (
 ) => {
       
       
-      return axiosMutator<PaginatedUsers>(
+      return axiosMutator<UsersPaginatedResponse>(
       {url: `/v1/admin/users`, method: 'GET',
         params, signal
     },
@@ -347,7 +347,7 @@ export const getAdminUser = (
 ) => {
       
       
-      return axiosMutator<User>(
+      return axiosMutator<UserResponse>(
       {url: `/v1/admin/users/${id}`, method: 'GET', signal
     },
       );
@@ -403,7 +403,7 @@ export const updateAdminUser = (
  ) => {
       
       
-      return axiosMutator<User>(
+      return axiosMutator<UserResponse>(
       {url: `/v1/admin/users/${id}`, method: 'PUT',
       headers: {'Content-Type': 'application/json', },
       data: updateUserRequest
@@ -609,7 +609,7 @@ export const getAdminAuctionItems = (
 ) => {
       
       
-      return axiosMutator<PaginatedAuctionItems>(
+      return axiosMutator<AuctionItemsPaginatedResponse>(
       {url: `/v1/admin/auction-items`, method: 'GET',
         params, signal
     },
@@ -665,7 +665,7 @@ export const createAdminAuctionItem = (
  ) => {
       
       
-      return axiosMutator<AuctionItem>(
+      return axiosMutator<AuctionItemResponse>(
       {url: `/v1/admin/auction-items`, method: 'POST',
       headers: {'Content-Type': 'application/json', },
       data: createAuctionItemRequest
@@ -718,7 +718,7 @@ export const getAdminAuctionItem = (
 ) => {
       
       
-      return axiosMutator<AuctionItem>(
+      return axiosMutator<AuctionItemResponse>(
       {url: `/v1/admin/auction-items/${id}`, method: 'GET', signal
     },
       );
@@ -774,7 +774,7 @@ export const updateAdminAuctionItem = (
  ) => {
       
       
-      return axiosMutator<AuctionItem>(
+      return axiosMutator<AuctionItemResponse>(
       {url: `/v1/admin/auction-items/${id}`, method: 'PUT',
       headers: {'Content-Type': 'application/json', },
       data: updateAuctionItemRequest
@@ -884,7 +884,7 @@ export const forceEndAdminAuctionItem = (
   
 
 
-export const getForceEndAdminAuctionItemMutationOptions = <TError = unknown,
+export const getForceEndAdminAuctionItemMutationOptions = <TError = void,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof forceEndAdminAuctionItem>>, TError,{pathParams: ForceEndAdminAuctionItemPathParameters}, TContext>, }
 ): UseMutationOptions<Awaited<ReturnType<typeof forceEndAdminAuctionItem>>, TError,{pathParams: ForceEndAdminAuctionItemPathParameters}, TContext> => {
 const {mutation: mutationOptions} = options ?? {};
@@ -905,9 +905,9 @@ const {mutation: mutationOptions} = options ?? {};
 
     export type ForceEndAdminAuctionItemMutationResult = NonNullable<Awaited<ReturnType<typeof forceEndAdminAuctionItem>>>
     
-    export type ForceEndAdminAuctionItemMutationError = unknown
+    export type ForceEndAdminAuctionItemMutationError = void
 
-    export const useForceEndAdminAuctionItem = <TError = unknown,
+    export const useForceEndAdminAuctionItem = <TError = void,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof forceEndAdminAuctionItem>>, TError,{pathParams: ForceEndAdminAuctionItemPathParameters}, TContext>, }
 ): UseMutationResult<
         Awaited<ReturnType<typeof forceEndAdminAuctionItem>>,
@@ -927,7 +927,7 @@ export const getAdminCategories = (
 ) => {
       
       
-      return axiosMutator<PaginatedCategories>(
+      return axiosMutator<CategoriesPaginatedResponse>(
       {url: `/v1/admin/categories`, method: 'GET',
         params, signal
     },
@@ -983,7 +983,7 @@ export const createAdminCategory = (
  ) => {
       
       
-      return axiosMutator<Category>(
+      return axiosMutator<CategoryResponse>(
       {url: `/v1/admin/categories`, method: 'POST',
       headers: {'Content-Type': 'application/json', },
       data: createCategoryRequest
@@ -1036,7 +1036,7 @@ export const getAdminCategory = (
 ) => {
       
       
-      return axiosMutator<Category>(
+      return axiosMutator<CategoryResponse>(
       {url: `/v1/admin/categories/${id}`, method: 'GET', signal
     },
       );
@@ -1092,7 +1092,7 @@ export const updateAdminCategory = (
  ) => {
       
       
-      return axiosMutator<Category>(
+      return axiosMutator<CategoryResponse>(
       {url: `/v1/admin/categories/${id}`, method: 'PUT',
       headers: {'Content-Type': 'application/json', },
       data: updateCategoryRequest
@@ -1195,7 +1195,7 @@ export const getAdminPromotionalBanners = (
 ) => {
       
       
-      return axiosMutator<PaginatedBanners>(
+      return axiosMutator<PromotionalBannersPaginatedResponse>(
       {url: `/v1/admin/promotional-banners`, method: 'GET',
         params, signal
     },
@@ -1247,14 +1247,14 @@ export const useGetAdminPromotionalBanners = <TData = Awaited<ReturnType<typeof 
 
 
 export const createAdminPromotionalBanner = (
-    createBannerRequest: CreateBannerRequest,
+    createPromotionalBannerRequest: CreatePromotionalBannerRequest,
  ) => {
       
       
-      return axiosMutator<PromotionalBanner>(
+      return axiosMutator<PromotionalBannerResponse>(
       {url: `/v1/admin/promotional-banners`, method: 'POST',
       headers: {'Content-Type': 'application/json', },
-      data: createBannerRequest
+      data: createPromotionalBannerRequest
     },
       );
     }
@@ -1262,14 +1262,14 @@ export const createAdminPromotionalBanner = (
 
 
 export const getCreateAdminPromotionalBannerMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAdminPromotionalBanner>>, TError,{data: CreateBannerRequest}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof createAdminPromotionalBanner>>, TError,{data: CreateBannerRequest}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAdminPromotionalBanner>>, TError,{data: CreatePromotionalBannerRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof createAdminPromotionalBanner>>, TError,{data: CreatePromotionalBannerRequest}, TContext> => {
 const {mutation: mutationOptions} = options ?? {};
 
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createAdminPromotionalBanner>>, {data: CreateBannerRequest}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createAdminPromotionalBanner>>, {data: CreatePromotionalBannerRequest}> = (props) => {
           const {data} = props ?? {};
 
           return  createAdminPromotionalBanner(data,)
@@ -1281,15 +1281,15 @@ const {mutation: mutationOptions} = options ?? {};
   return  { mutationFn, ...mutationOptions }}
 
     export type CreateAdminPromotionalBannerMutationResult = NonNullable<Awaited<ReturnType<typeof createAdminPromotionalBanner>>>
-    export type CreateAdminPromotionalBannerMutationBody = CreateBannerRequest
+    export type CreateAdminPromotionalBannerMutationBody = CreatePromotionalBannerRequest
     export type CreateAdminPromotionalBannerMutationError = unknown
 
     export const useCreateAdminPromotionalBanner = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAdminPromotionalBanner>>, TError,{data: CreateBannerRequest}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAdminPromotionalBanner>>, TError,{data: CreatePromotionalBannerRequest}, TContext>, }
 ): UseMutationResult<
         Awaited<ReturnType<typeof createAdminPromotionalBanner>>,
         TError,
-        {data: CreateBannerRequest},
+        {data: CreatePromotionalBannerRequest},
         TContext
       > => {
 
@@ -1304,7 +1304,7 @@ export const getAdminPromotionalBanner = (
 ) => {
       
       
-      return axiosMutator<PromotionalBanner>(
+      return axiosMutator<PromotionalBannerResponse>(
       {url: `/v1/admin/promotional-banners/${id}`, method: 'GET', signal
     },
       );
@@ -1356,14 +1356,14 @@ export const useGetAdminPromotionalBanner = <TData = Awaited<ReturnType<typeof g
 
 export const updateAdminPromotionalBanner = (
     { id }: UpdateAdminPromotionalBannerPathParameters,
-    createBannerRequest: CreateBannerRequest,
+    createPromotionalBannerRequest: CreatePromotionalBannerRequest,
  ) => {
       
       
-      return axiosMutator<PromotionalBanner>(
+      return axiosMutator<PromotionalBannerResponse>(
       {url: `/v1/admin/promotional-banners/${id}`, method: 'PUT',
       headers: {'Content-Type': 'application/json', },
-      data: createBannerRequest
+      data: createPromotionalBannerRequest
     },
       );
     }
@@ -1371,14 +1371,14 @@ export const updateAdminPromotionalBanner = (
 
 
 export const getUpdateAdminPromotionalBannerMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAdminPromotionalBanner>>, TError,{pathParams: UpdateAdminPromotionalBannerPathParameters;data: CreateBannerRequest}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof updateAdminPromotionalBanner>>, TError,{pathParams: UpdateAdminPromotionalBannerPathParameters;data: CreateBannerRequest}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAdminPromotionalBanner>>, TError,{pathParams: UpdateAdminPromotionalBannerPathParameters;data: CreatePromotionalBannerRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof updateAdminPromotionalBanner>>, TError,{pathParams: UpdateAdminPromotionalBannerPathParameters;data: CreatePromotionalBannerRequest}, TContext> => {
 const {mutation: mutationOptions} = options ?? {};
 
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateAdminPromotionalBanner>>, {pathParams: UpdateAdminPromotionalBannerPathParameters;data: CreateBannerRequest}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateAdminPromotionalBanner>>, {pathParams: UpdateAdminPromotionalBannerPathParameters;data: CreatePromotionalBannerRequest}> = (props) => {
           const {pathParams,data} = props ?? {};
 
           return  updateAdminPromotionalBanner(pathParams,data,)
@@ -1390,15 +1390,15 @@ const {mutation: mutationOptions} = options ?? {};
   return  { mutationFn, ...mutationOptions }}
 
     export type UpdateAdminPromotionalBannerMutationResult = NonNullable<Awaited<ReturnType<typeof updateAdminPromotionalBanner>>>
-    export type UpdateAdminPromotionalBannerMutationBody = CreateBannerRequest
+    export type UpdateAdminPromotionalBannerMutationBody = CreatePromotionalBannerRequest
     export type UpdateAdminPromotionalBannerMutationError = unknown
 
     export const useUpdateAdminPromotionalBanner = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAdminPromotionalBanner>>, TError,{pathParams: UpdateAdminPromotionalBannerPathParameters;data: CreateBannerRequest}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAdminPromotionalBanner>>, TError,{pathParams: UpdateAdminPromotionalBannerPathParameters;data: CreatePromotionalBannerRequest}, TContext>, }
 ): UseMutationResult<
         Awaited<ReturnType<typeof updateAdminPromotionalBanner>>,
         TError,
-        {pathParams: UpdateAdminPromotionalBannerPathParameters;data: CreateBannerRequest},
+        {pathParams: UpdateAdminPromotionalBannerPathParameters;data: CreatePromotionalBannerRequest},
         TContext
       > => {
 
@@ -1458,14 +1458,14 @@ const {mutation: mutationOptions} = options ?? {};
     }
     
 export const reorderAdminPromotionalBanners = (
-    reorderBannersRequest: ReorderBannersRequest,
+    reorderPromotionalBannersRequest: ReorderPromotionalBannersRequest,
  ) => {
       
       
       return axiosMutator<void>(
       {url: `/v1/admin/promotional-banners/reorder`, method: 'POST',
       headers: {'Content-Type': 'application/json', },
-      data: reorderBannersRequest
+      data: reorderPromotionalBannersRequest
     },
       );
     }
@@ -1473,14 +1473,14 @@ export const reorderAdminPromotionalBanners = (
 
 
 export const getReorderAdminPromotionalBannersMutationOptions = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reorderAdminPromotionalBanners>>, TError,{data: ReorderBannersRequest}, TContext>, }
-): UseMutationOptions<Awaited<ReturnType<typeof reorderAdminPromotionalBanners>>, TError,{data: ReorderBannersRequest}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reorderAdminPromotionalBanners>>, TError,{data: ReorderPromotionalBannersRequest}, TContext>, }
+): UseMutationOptions<Awaited<ReturnType<typeof reorderAdminPromotionalBanners>>, TError,{data: ReorderPromotionalBannersRequest}, TContext> => {
 const {mutation: mutationOptions} = options ?? {};
 
       
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof reorderAdminPromotionalBanners>>, {data: ReorderBannersRequest}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof reorderAdminPromotionalBanners>>, {data: ReorderPromotionalBannersRequest}> = (props) => {
           const {data} = props ?? {};
 
           return  reorderAdminPromotionalBanners(data,)
@@ -1492,15 +1492,15 @@ const {mutation: mutationOptions} = options ?? {};
   return  { mutationFn, ...mutationOptions }}
 
     export type ReorderAdminPromotionalBannersMutationResult = NonNullable<Awaited<ReturnType<typeof reorderAdminPromotionalBanners>>>
-    export type ReorderAdminPromotionalBannersMutationBody = ReorderBannersRequest
+    export type ReorderAdminPromotionalBannersMutationBody = ReorderPromotionalBannersRequest
     export type ReorderAdminPromotionalBannersMutationError = unknown
 
     export const useReorderAdminPromotionalBanners = <TError = unknown,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reorderAdminPromotionalBanners>>, TError,{data: ReorderBannersRequest}, TContext>, }
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reorderAdminPromotionalBanners>>, TError,{data: ReorderPromotionalBannersRequest}, TContext>, }
 ): UseMutationResult<
         Awaited<ReturnType<typeof reorderAdminPromotionalBanners>>,
         TError,
-        {data: ReorderBannersRequest},
+        {data: ReorderPromotionalBannersRequest},
         TContext
       > => {
 
@@ -1515,7 +1515,7 @@ export const getAdminBids = (
 ) => {
       
       
-      return axiosMutator<PaginatedBids>(
+      return axiosMutator<BidsPaginatedResponse>(
       {url: `/v1/admin/bids`, method: 'GET',
         params, signal
     },
@@ -1686,7 +1686,7 @@ export const getAdminEndedItems = (
 ) => {
       
       
-      return axiosMutator<PaginatedAuctionItems>(
+      return axiosMutator<AuctionItemsPaginatedResponse>(
       {url: `/v1/admin/ended-items`, method: 'GET',
         params, signal
     },

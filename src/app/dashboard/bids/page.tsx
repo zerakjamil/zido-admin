@@ -36,7 +36,7 @@ export default function BidsPage() {
 
   const bidsQuery = useGetAdminBids(params, { query: { placeholderData: keepPreviousData } });
   const bids = bidsQuery.data?.data ?? [];
-  const total = bidsQuery.data?.pagination.total ?? 0;
+  const total = bidsQuery.data?.meta?.total ?? 0;
   const loading = bidsQuery.isFetching || bidsQuery.isLoading;
 
   useEffect(() => {

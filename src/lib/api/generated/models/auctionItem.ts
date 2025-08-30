@@ -4,34 +4,52 @@
  * ZidoBid Admin API
  * OpenAPI spec version: 0.1.0-local
  */
+import type { Category } from './category';
+import type { User } from './user';
 import type { AuctionItemStatus } from './auctionItemStatus';
 
 export interface AuctionItem {
-  bid_increment: number;
-  bids_count?: number;
-  category_id: number;
-  condition?: string;
-  created_at: string;
-  current_bid?: number;
-  description?: string;
-  end_time: string;
-  featured: boolean;
   /** @nullable */
-  final_price?: number | null;
-  id: number;
-  images: string[];
-  location?: string;
+  brand?: string | null;
+  /** @nullable */
+  buyout_price?: number | null;
+  category?: Category;
+  /** @nullable */
+  color?: string | null;
+  condition?: string;
+  created_at?: string;
+  current_price?: number;
+  description?: string;
+  end_time?: string;
+  /** @nullable */
+  highest_bid?: number | null;
+  id?: number;
+  images?: string[];
+  increment_amount?: number;
+  is_featured?: boolean;
+  item_code?: string;
+  /** @nullable */
+  location?: string | null;
+  /** @nullable */
+  model?: string | null;
+  name?: string;
   /** @nullable */
   reserve_price?: number | null;
   /** @nullable */
-  shipping_info?: string | null;
-  start_time: string;
-  starting_bid: number;
-  status: AuctionItemStatus;
-  title: string;
-  updated_at: string;
-  views_count?: number;
-  watchers_count?: number;
+  retail_price?: number | null;
   /** @nullable */
-  winner_id?: number | null;
+  return_policy?: string | null;
+  seller?: User;
+  /** @nullable */
+  shipping_info?: string | null;
+  start_time?: string;
+  starting_price?: number;
+  status?: AuctionItemStatus;
+  total_bids?: number;
+  updated_at?: string;
+  /** @nullable */
+  video_url?: string | null;
+  winner?: User;
+  /** @nullable */
+  year?: number | null;
 }

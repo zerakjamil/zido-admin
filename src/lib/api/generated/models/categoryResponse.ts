@@ -5,9 +5,7 @@
  * OpenAPI spec version: 0.1.0-local
  */
 import type { Category } from './category';
-import type { Pagination } from './pagination';
 
-export interface PaginatedCategories {
-  data: Category[];
-  pagination: Pagination;
+export interface CategoryResponse {
+  data?: Category;
 }

@@ -5,6 +5,7 @@
  * OpenAPI spec version: 0.1.0-local
  */
 
-export interface ReorderBannersRequest {
-  banner_ids: number[];
-}
+export type ReorderPromotionalBannersRequestBannersItem = {
+  id: number;
+  sort_order: number;
+};

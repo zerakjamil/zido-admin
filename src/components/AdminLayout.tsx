@@ -52,7 +52,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           label: 'All Users',
         },
         {
-          key: '/dashboard/users/suspended',
+          key: '/dashboard/users?status=suspended',
           label: 'Suspended Users',
         },
       ],
@@ -154,15 +154,17 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   ];
 
   const getSelectedKeys = () => {
+    const normalize = (k: string) => k.split('?')[0];
+
     // Find the exact match first
     for (const item of menuItems) {
-      if (item.key === pathname) {
-        return [item.key];
+      if (typeof item.key === 'string' && normalize(item.key) === pathname) {
+        return [item.key as string];
       }
       if (item.children) {
         for (const child of item.children) {
-          if (child.key === pathname) {
-            return [child.key];
+          if (normalize(child.key as string) === pathname) {
+            return [child.key as string];
           }
         }
       }
@@ -172,13 +174,13 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     for (const item of menuItems) {
       if (item.children) {
         for (const child of item.children) {
-          if (pathname.startsWith(child.key)) {
-            return [child.key];
+          if (pathname.startsWith(normalize(child.key as string))) {
+            return [child.key as string];
           }
         }
       }
-      if (pathname.startsWith(item.key)) {
-        return [item.key];
+      if (typeof item.key === 'string' && pathname.startsWith(normalize(item.key))) {
+        return [item.key as string];
       }
     }
     
@@ -186,16 +188,17 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   };
 
   const getOpenKeys = () => {
+    const normalize = (k: string) => k.split('?')[0];
     for (const item of menuItems) {
       if (item.children) {
         for (const child of item.children) {
-          if (pathname.startsWith(child.key)) {
-            return [item.key];
+          if (pathname.startsWith(normalize(child.key as string))) {
+            return [item.key as string];
           }
         }
       }
     }
-    return [];
+    return [] as string[];
   };
 
   return (

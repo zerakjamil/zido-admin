@@ -10,9 +10,8 @@ export type PromotionalBannerPosition = typeof PromotionalBannerPosition[keyof t
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const PromotionalBannerPosition = {
-  header: 'header',
+  top: 'top',
+  middle: 'middle',
+  bottom: 'bottom',
   sidebar: 'sidebar',
-  footer: 'footer',
-  home_hero: 'home_hero',
-  category_top: 'category_top',
 } as const;

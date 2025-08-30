@@ -5,10 +5,11 @@
  * OpenAPI spec version: 0.1.0-local
  */
 
-export interface CreateBannerRequest {
+export interface CreatePromotionalBannerRequest {
   description?: string;
   end_date?: string;
-  image: string;
+  image_url: string;
+  is_active?: boolean;
   link_url?: string;
   position: string;
   sort_order?: number;

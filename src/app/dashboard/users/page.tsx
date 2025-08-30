@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import {
   Table,
   Card,
@@ -40,14 +40,15 @@ import { useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import AdminLayout from '@/components/AdminLayout';
 import { useAuthStore } from '@/lib/auth-store';
 import dayjs, { Dayjs } from 'dayjs';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 const { Title } = Typography;
 const { confirm } = Modal;
 const { Search } = Input;
 
-export default function UsersPage() {
+function UsersPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [filters, setFilters] = useState<Pick<GetAdminUsersParams, 'search' | 'status' | 'sort_by' | 'sort_direction'>>({
@@ -85,7 +86,7 @@ export default function UsersPage() {
   });
 
   const users = usersQuery.data?.data ?? [];
-  const total = usersQuery.data?.pagination.total ?? 0;
+  const total = usersQuery.data?.meta?.total ?? 0;
   const loading = usersQuery.isFetching || usersQuery.isLoading;
   const loadErrorMessage = usersQuery.error ? ((usersQuery.error as { message?: string }).message ?? 'Failed to load users') : null;
 
@@ -137,14 +138,39 @@ export default function UsersPage() {
     }
   }, [isAuthenticated, router]);
 
+  // Initialize filters from URL (e.g., /dashboard/users?status=suspended)
+  useEffect(() => {
+    const statusParam = searchParams.get('status') as GetAdminUsersParams['status'] | null;
+    if (statusParam && statusParam !== filters.status) {
+      setFilters((prev) => ({ ...prev, status: statusParam }));
+      setCurrentPage(1);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
   const handleSearch = (value: string) => {
     setFilters(prev => ({ ...prev, search: value }));
     setCurrentPage(1);
+    const params = new URLSearchParams(searchParams.toString());
+    if (value) {
+      params.set('search', value);
+    } else {
+      params.delete('search');
+    }
+    router.push(`/dashboard/users?${params.toString()}`);
   };
 
   const handleStatusFilter = (value: string) => {
-    setFilters(prev => ({ ...prev, status: (value || undefined) as GetAdminUsersParams['status'] }));
+    const statusValue = (value || undefined) as GetAdminUsersParams['status'];
+    setFilters(prev => ({ ...prev, status: statusValue }));
     setCurrentPage(1);
+    const params = new URLSearchParams(searchParams.toString());
+    if (statusValue) {
+      params.set('status', statusValue);
+    } else {
+      params.delete('status');
+    }
+    router.push(`/dashboard/users?${params.toString()}`);
   };
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -579,6 +605,7 @@ export default function UsersPage() {
                 allowClear
                 onChange={handleStatusFilter}
                 style={{ width: '100%' }}
+                value={filters.status}
                 options={[
                   { label: 'Active', value: 'active' },
                   { label: 'Suspended', value: 'suspended' },
@@ -806,4 +833,8 @@ export default function UsersPage() {
       </div>
     </AdminLayout>
   );
+}
+
+export default function UsersPage() {
+  return React.createElement(Suspense, { fallback: React.createElement('div', null) }, React.createElement(UsersPageContent));
 }

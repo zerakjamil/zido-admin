@@ -13,7 +13,6 @@ per_page?: number;
 search?: string;
 status?: GetAdminAuctionItemsStatus;
 category_id?: number;
-featured?: boolean;
 sort_by?: string;
 sort_direction?: GetAdminAuctionItemsSortDirection;
 };

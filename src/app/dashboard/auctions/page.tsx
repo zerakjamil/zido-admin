@@ -93,7 +93,7 @@ export default function AuctionsPage() {
   });
 
   const items = itemsQuery.data?.data ?? [];
-  const total = itemsQuery.data?.pagination.total ?? 0;
+  const total = itemsQuery.data?.meta?.total ?? 0;
   const loading = itemsQuery.isFetching || itemsQuery.isLoading;
 
   const createMutation = useCreateAdminAuctionItem({
@@ -201,7 +201,7 @@ export default function AuctionsPage() {
   ) => {
     const payload: CreateAuctionItemRequest = {
       ...values,
-      featured: values.featured ?? false,
+      is_featured: values.is_featured ?? false,
       start_time: normalizeDate(values.start_time) as string,
       end_time: normalizeDate(values.end_time) as string,
       images: values.images ?? [],
@@ -217,19 +217,20 @@ export default function AuctionsPage() {
   const handleEdit = (item: AuctionItem) => {
     setSelectedItem(item);
     editForm.setFieldsValue({
-      title: item.title,
+      name: item.name,
       description: item.description ?? undefined,
-      category_id: item.category_id,
-      starting_bid: item.starting_bid,
-      bid_increment: item.bid_increment,
+      category_id: item.category?.id ?? undefined,
+      starting_price: item.starting_price,
+      increment_amount: item.increment_amount,
       reserve_price: item.reserve_price ?? undefined,
       shipping_info: item.shipping_info ?? undefined,
       location: item.location ?? undefined,
-      featured: item.featured,
+      is_featured: item.is_featured,
       start_time: item.start_time,
       end_time: item.end_time,
       condition: item.condition ?? undefined,
-    });
+      retail_price: item.retail_price ?? undefined,
+    } as unknown as UpdateAuctionItemRequest & { start_time?: unknown; end_time?: unknown });
     setEditModalVisible(true);
   };
 
@@ -243,7 +244,7 @@ export default function AuctionsPage() {
       end_time: normalizeDate(values.end_time),
     };
     try {
-      await updateMutation.mutateAsync({ pathParams: { id: selectedItem.id }, data: payload });
+      await updateMutation.mutateAsync({ pathParams: { id: selectedItem.id as number }, data: payload });
       setEditModalVisible(false);
     } catch (err) {
       console.error(err);
@@ -254,13 +255,13 @@ export default function AuctionsPage() {
     confirm({
       title: 'Delete this auction item?',
       icon: <ExclamationCircleOutlined />,
-      content: `This will permanently delete ${item.title}.`,
+      content: `This will permanently delete ${item.name}.`,
       okText: 'Yes, Delete',
       okType: 'danger',
       cancelText: 'Cancel',
       onOk: async () => {
         try {
-          await deleteMutation.mutateAsync({ pathParams: { id: item.id } });
+          await deleteMutation.mutateAsync({ pathParams: { id: item.id as number } });
         } catch (err) {
           console.error(err);
         }
@@ -270,7 +271,7 @@ export default function AuctionsPage() {
 
   const handleForceEnd = async (item: AuctionItem) => {
     try {
-      await forceEndMutation.mutateAsync({ pathParams: { id: item.id } });
+      await forceEndMutation.mutateAsync({ pathParams: { id: item.id as number } });
     } catch (err) {
       console.error(err);
     }
@@ -314,11 +315,17 @@ export default function AuctionsPage() {
 
   const columns: TableProps<AuctionItem>['columns'] = [
     {
-      title: 'Title',
-      dataIndex: 'title',
-      key: 'title',
+      title: 'Name',
+      dataIndex: 'name',
+      key: 'name',
       sorter: true,
       render: (val: string) => <span style={{ fontWeight: 500 }}>{val}</span>,
+    },
+    {
+      title: 'Item Code',
+      dataIndex: 'item_code',
+      key: 'item_code',
+      render: (val?: string) => val ?? '-',
     },
     {
       title: 'Status',
@@ -328,11 +335,18 @@ export default function AuctionsPage() {
       render: (status: string) => <Tag color={getStatusColor(status)}>{status.toUpperCase()}</Tag>,
     },
     {
-      title: 'Current Bid',
-      dataIndex: 'current_bid',
-      key: 'current_bid',
+      title: 'Current Price',
+      dataIndex: 'current_price',
+      key: 'current_price',
       sorter: true,
       render: (val: number | undefined) => (val != null ? formatCurrency(val) : '-'),
+    },
+    {
+      title: 'Retail Price',
+      dataIndex: 'retail_price',
+      key: 'retail_price',
+      sorter: true,
+      render: (val?: number | null) => (val != null ? formatCurrency(val) : '-'),
     },
     {
       title: 'Start',
@@ -350,10 +364,10 @@ export default function AuctionsPage() {
     },
     {
       title: 'Featured',
-      dataIndex: 'featured',
-      key: 'featured',
+      dataIndex: 'is_featured',
+      key: 'is_featured',
       align: 'center',
-      render: (v: boolean) => (v ? 'Yes' : 'No'),
+      render: (v?: boolean) => (v ? 'Yes' : 'No'),
     },
     {
       title: 'Actions',
@@ -373,7 +387,7 @@ export default function AuctionsPage() {
         <Card>
           <Space wrap>
             <Search
-              placeholder="Search auctions"
+              placeholder="Search auctions (name or item code)"
               onSearch={handleSearch}
               allowClear
               enterButton
@@ -421,20 +435,22 @@ export default function AuctionsPage() {
       {/* View Modal */}
       <Modal
         open={viewModalVisible}
-        title={selectedItem?.title}
+        title={selectedItem?.name}
         onCancel={() => setViewModalVisible(false)}
         footer={null}
         width={720}
       >
         {selectedItem && (
           <Space direction="vertical" style={{ width: '100%' }}>
-            <div><b>Status:</b> <Tag color={getStatusColor(selectedItem.status)}>{selectedItem.status.toUpperCase()}</Tag></div>
-            <div><b>Starting Bid:</b> {formatCurrency(selectedItem.starting_bid)}</div>
-            <div><b>Bid Increment:</b> {formatCurrency(selectedItem.bid_increment)}</div>
-            <div><b>Current Bid:</b> {selectedItem.current_bid != null ? formatCurrency(selectedItem.current_bid) : '-'}</div>
-            <div><b>Start:</b> {formatDateTime(selectedItem.start_time)}</div>
-            <div><b>End:</b> {formatDateTime(selectedItem.end_time)}</div>
-            <div><b>Featured:</b> {selectedItem.featured ? 'Yes' : 'No'}</div>
+            <div><b>Item Code:</b> {selectedItem.item_code || '-'}</div>
+            <div><b>Status:</b> <Tag color={getStatusColor(selectedItem.status || '')}>{(selectedItem.status || '').toUpperCase()}</Tag></div>
+            <div><b>Starting Price:</b> {formatCurrency(selectedItem.starting_price || 0)}</div>
+            <div><b>Increment Amount:</b> {formatCurrency(selectedItem.increment_amount || 0)}</div>
+            <div><b>Current Price:</b> {selectedItem.current_price != null ? formatCurrency(selectedItem.current_price) : '-'}</div>
+            <div><b>Retail Price:</b> {selectedItem.retail_price != null ? formatCurrency(selectedItem.retail_price) : '-'}</div>
+            <div><b>Start:</b> {selectedItem.start_time ? formatDateTime(selectedItem.start_time) : '-'}</div>
+            <div><b>End:</b> {selectedItem.end_time ? formatDateTime(selectedItem.end_time) : '-'}</div>
+            <div><b>Featured:</b> {selectedItem.is_featured ? 'Yes' : 'No'}</div>
             <div><b>Description:</b> {selectedItem.description || '-'}</div>
           </Space>
         )}
@@ -452,18 +468,21 @@ export default function AuctionsPage() {
           form={createForm}
           layout="vertical"
           onFinish={handleCreateSubmit}
-          initialValues={{ featured: false }}
+          initialValues={{ is_featured: false }}
         >
-          <Form.Item name="title" label="Title" rules={[{ required: true }]}>
+          <Form.Item name="name" label="Name" rules={[{ required: true }]}>
             <Input />
           </Form.Item>
-          <Form.Item name="description" label="Description">
+          <Form.Item name="description" label="Description" rules={[{ required: true }]}>
             <Input.TextArea rows={4} />
           </Form.Item>
           <Form.Item name="category_id" label="Category ID" rules={[{ required: true }]}>
             <InputNumber style={{ width: '100%' }} min={1} />
           </Form.Item>
-          <Form.Item name="location" label="Location" rules={[{ required: true }]}>
+          <Form.Item name="location" label="Location">
+            <Input />
+          </Form.Item>
+          <Form.Item name="condition" label="Condition" rules={[{ required: true }]}>
             <Input />
           </Form.Item>
           <Form.Item name="start_time" label="Start Time" rules={[{ required: true }]}>
@@ -472,22 +491,22 @@ export default function AuctionsPage() {
           <Form.Item name="end_time" label="End Time" rules={[{ required: true }]}>
             <DatePicker showTime style={{ width: '100%' }} />
           </Form.Item>
-          <Form.Item name="starting_bid" label="Starting Bid" rules={[{ required: true }]}>
+          <Form.Item name="starting_price" label="Starting Price" rules={[{ required: true }]}>
             <InputNumber style={{ width: '100%' }} min={0} />
           </Form.Item>
-          <Form.Item name="bid_increment" label="Bid Increment" rules={[{ required: true }]}>
+          <Form.Item name="increment_amount" label="Increment Amount" rules={[{ required: true }]}>
             <InputNumber style={{ width: '100%' }} min={1} />
           </Form.Item>
           <Form.Item name="reserve_price" label="Reserve Price">
             <InputNumber style={{ width: '100%' }} min={0} />
           </Form.Item>
+          <Form.Item name="retail_price" label="Retail Price">
+            <InputNumber style={{ width: '100%' }} min={0} />
+          </Form.Item>
           <Form.Item name="shipping_info" label="Shipping Info">
             <Input />
           </Form.Item>
-          <Form.Item name="condition" label="Condition">
-            <Input />
-          </Form.Item>
-          <Form.Item name="featured" label="Featured" valuePropName="checked">
+          <Form.Item name="is_featured" label="Featured" valuePropName="checked">
             <Switch />
           </Form.Item>
         </Form>
@@ -501,7 +520,7 @@ export default function AuctionsPage() {
         onOk={() => editForm.submit()}
       >
         <Form form={editForm} layout="vertical" onFinish={handleEditSubmit}>
-          <Form.Item name="title" label="Title">
+          <Form.Item name="name" label="Name">
             <Input />
           </Form.Item>
           <Form.Item name="description" label="Description">
@@ -513,28 +532,31 @@ export default function AuctionsPage() {
           <Form.Item name="location" label="Location">
             <Input />
           </Form.Item>
+          <Form.Item name="condition" label="Condition">
+            <Input />
+          </Form.Item>
           <Form.Item name="start_time" label="Start Time">
             <DatePicker showTime style={{ width: '100%' }} />
           </Form.Item>
           <Form.Item name="end_time" label="End Time">
             <DatePicker showTime style={{ width: '100%' }} />
           </Form.Item>
-          <Form.Item name="starting_bid" label="Starting Bid">
+          <Form.Item name="starting_price" label="Starting Price">
             <InputNumber style={{ width: '100%' }} min={0} />
           </Form.Item>
-          <Form.Item name="bid_increment" label="Bid Increment">
+          <Form.Item name="increment_amount" label="Increment Amount">
             <InputNumber style={{ width: '100%' }} min={1} />
           </Form.Item>
           <Form.Item name="reserve_price" label="Reserve Price">
             <InputNumber style={{ width: '100%' }} min={0} />
           </Form.Item>
+          <Form.Item name="retail_price" label="Retail Price">
+            <InputNumber style={{ width: '100%' }} min={0} />
+          </Form.Item>
           <Form.Item name="shipping_info" label="Shipping Info">
             <Input />
           </Form.Item>
-          <Form.Item name="condition" label="Condition">
-            <Input />
-          </Form.Item>
-          <Form.Item name="featured" label="Featured" valuePropName="checked">
+          <Form.Item name="is_featured" label="Featured" valuePropName="checked">
             <Switch />
           </Form.Item>
         </Form>

@@ -6,17 +6,29 @@
  */
 
 export interface CreateAuctionItemRequest {
-  bid_increment: number;
+  brand?: string;
+  /** @nullable */
+  buyout_price?: number | null;
   category_id: number;
+  color?: string;
   condition: string;
   description: string;
   end_time: string;
-  featured?: boolean;
   images?: string[];
-  location: string;
-  reserve_price?: number;
+  increment_amount: number;
+  is_featured?: boolean;
+  location?: string;
+  model?: string;
+  name: string;
+  /** @nullable */
+  reserve_price?: number | null;
+  /** @nullable */
+  retail_price?: number | null;
+  return_policy?: string;
   shipping_info?: string;
   start_time: string;
-  starting_bid: number;
-  title: string;
+  starting_price: number;
+  user_id?: number;
+  video_url?: string;
+  year?: number;
 }

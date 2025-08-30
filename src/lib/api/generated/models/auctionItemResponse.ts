@@ -5,9 +5,7 @@
  * OpenAPI spec version: 0.1.0-local
  */
 import type { AuctionItem } from './auctionItem';
-import type { Pagination } from './pagination';
 
-export interface PaginatedAuctionItems {
-  data: AuctionItem[];
-  pagination: Pagination;
+export interface AuctionItemResponse {
+  data?: AuctionItem;
 }

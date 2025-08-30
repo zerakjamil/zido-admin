@@ -5,9 +5,7 @@
  * OpenAPI spec version: 0.1.0-local
  */
 import type { User } from './user';
-import type { Pagination } from './pagination';
 
-export interface PaginatedUsers {
-  data: User[];
-  pagination: Pagination;
+export interface UserResponse {
+  data?: User;
 }

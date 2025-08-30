@@ -6,16 +6,27 @@
  */
 
 export interface UpdateAuctionItemRequest {
-  bid_increment?: number;
+  brand?: string;
+  buyout_price?: number;
   category_id?: number;
+  color?: string;
   condition?: string;
   description?: string;
   end_time?: string;
-  featured?: boolean;
+  images?: string[];
+  increment_amount?: number;
+  is_featured?: boolean;
   location?: string;
+  model?: string;
+  name?: string;
   reserve_price?: number;
+  /** @nullable */
+  retail_price?: number | null;
+  return_policy?: string;
   shipping_info?: string;
   start_time?: string;
-  starting_bid?: number;
-  title?: string;
+  starting_price?: number;
+  user_id?: number;
+  video_url?: string;
+  year?: number;
 }

@@ -5,9 +5,7 @@
  * OpenAPI spec version: 0.1.0-local
  */
 import type { PromotionalBanner } from './promotionalBanner';
-import type { Pagination } from './pagination';
 
-export interface PaginatedBanners {
-  data: PromotionalBanner[];
-  pagination: Pagination;
+export interface PromotionalBannerResponse {
+  data?: PromotionalBanner;
 }

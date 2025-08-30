@@ -5,25 +5,25 @@
  * OpenAPI spec version: 0.1.0-local
  */
 import type { PromotionalBannerPosition } from './promotionalBannerPosition';
-import type { PromotionalBannerStatus } from './promotionalBannerStatus';
 
 export interface PromotionalBanner {
   click_count?: number;
   created_at: string;
+  ctr?: number;
   /** @nullable */
   description?: string | null;
   /** @nullable */
   end_date?: string | null;
   id: number;
-  image: string;
+  image_url: string;
   impression_count?: number;
+  is_active: boolean;
   /** @nullable */
   link_url?: string | null;
   position: PromotionalBannerPosition;
   sort_order: number;
   /** @nullable */
   start_date?: string | null;
-  status: PromotionalBannerStatus;
   title: string;
   updated_at: string;
 }
